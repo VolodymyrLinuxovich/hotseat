@@ -20,7 +20,7 @@ At the end each interviewer votes with an exact quote from your answers as evide
 
 ## Memory with Bruin
 
-Every session is written to `data/turns.jsonl` and `data/sessions.jsonl`. A Bruin pipeline loads them into DuckDB, runs quality checks, builds marts for topic scores, habit tags and the score trend, and exports `data/profile.json`. The next session's panel reads that profile, so it opens on your known weak spots and notices when you fix an old habit. See [bruin/README.md](bruin/README.md).
+Every session is written to `data/turns.jsonl` and `data/sessions.jsonl`. A Bruin pipeline loads them into DuckDB, runs quality checks, builds marts for topic scores, habit tags and the score trend, and exports `data/profile.json` with one profile per candidate, keyed by the name you enter. Your next session's panel reads your profile, so it opens on your known weak spots and notices when you fix an old habit. See [bruin/README.md](bruin/README.md).
 
 ## Run it
 

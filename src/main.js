@@ -476,7 +476,14 @@ function renderMemory(p) {
   $("memory").innerHTML = `<b>Panel memory</b> from ${p.sessions} past session${p.sessions > 1 ? "s" : ""} (Bruin pipeline):<br>${esc(p.focus || "")}
     <div class="chips">${weak}${tags}${strong}</div>`;
 }
-api("/api/profile").then(renderMemory).catch(() => renderMemory(null));
+function loadMemory() {
+  const name = $("name").value.trim();
+  localStorage.setItem("hotseat_name", name);
+  api(`/api/profile?name=${encodeURIComponent(name)}`).then(renderMemory).catch(() => renderMemory(null));
+}
+$("name").value = localStorage.getItem("hotseat_name") || "";
+$("name").addEventListener("change", loadMemory);
+loadMemory();
 
 // ---------- flow ----------
 let sessionId = null;
@@ -602,7 +609,7 @@ $("startBtn").onclick = async () => {
   speechSynthesis.speak(new SpeechSynthesisUtterance(""));
   try {
     conferring = true;
-    const out = await api("/api/start", { role: $("role").value });
+    const out = await api("/api/start", { role: $("role").value, name: $("name").value.trim() });
     sessionId = out.session_id;
     $("intro").classList.add("hidden");
     for (const id of ["hud", "ledger", "dock"]) {

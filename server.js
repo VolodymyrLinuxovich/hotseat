@@ -102,9 +102,16 @@ function pushNext(s, out, problem) {
   s.turns.push({ asker: out.decision.asker, question: out.question, difficulty: out.decision.difficulty, topic: out.decision.topic, answer: null, problem });
 }
 
-function readProfile() {
+function candidateId(name) {
+  const id = String(name || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
+  return id || "demo";
+}
+
+// data/profile.json is newline-delimited JSON written by the Bruin pipeline, one row per candidate.
+function readProfile(candidate) {
   try {
-    return JSON.parse(fs.readFileSync(path.join(DATA, "profile.json"), "utf8"));
+    const rows = fs.readFileSync(path.join(DATA, "profile.json"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+    return rows.find((r) => r.candidate_id === candidate) || null;
   } catch {
     return null;
   }
@@ -164,8 +171,8 @@ async function panelTurn(s) {
   return res.parsed_output;
 }
 
-app.get("/api/profile", (_req, res) => {
-  res.json(readProfile());
+app.get("/api/profile", (req, res) => {
+  res.json(readProfile(candidateId(req.query.name)));
 });
 
 app.post("/api/start", async (req, res) => {
@@ -174,7 +181,8 @@ app.post("/api/start", async (req, res) => {
     const s = {
       id,
       role: req.body.role || "Software Engineer Intern",
-      profile: readProfile(),
+      candidate: candidateId(req.body.name),
+      profile: readProfile(candidateId(req.body.name)),
       turns: [],
       started: new Date().toISOString(),
     };
@@ -269,6 +277,7 @@ Quotes must be copied from the candidate's answers. Never invent evidence. Refer
     fs.mkdirSync(DATA, { recursive: true });
     const turnLines = answered.map((t, i) =>
       JSON.stringify({
+        candidate_id: s.candidate,
         session_id: s.id,
         ts: new Date().toISOString(),
         turn: i + 1,
@@ -285,10 +294,10 @@ Quotes must be copied from the candidate's answers. Never invent evidence. Refer
     }
     fs.appendFileSync(
       path.join(DATA, "sessions.jsonl"),
-      JSON.stringify({ session_id: s.id, ts: new Date().toISOString(), verdict: v.verdict, overall: v.overall }) + "\n"
+      JSON.stringify({ candidate_id: s.candidate, session_id: s.id, ts: new Date().toISOString(), verdict: v.verdict, overall: v.overall }) + "\n"
     );
     const bruin = await runBruin();
-    res.json({ ...v, bruin: { ok: bruin.ok, ms: bruin.ms }, profile: readProfile() });
+    res.json({ ...v, bruin: { ok: bruin.ok, ms: bruin.ms }, profile: readProfile(s.candidate) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e.message || e) });
@@ -296,7 +305,7 @@ Quotes must be copied from the candidate's answers. Never invent evidence. Refer
 });
 
 app.get("/api/bruin/run", async (_req, res) => {
-  res.json({ ...(await runBruin()), profile: readProfile() });
+  res.json({ ...(await runBruin()), profile: readProfile(candidateId(_req.query.name)) });
 });
 
 const PORT = process.env.PORT || 8787;

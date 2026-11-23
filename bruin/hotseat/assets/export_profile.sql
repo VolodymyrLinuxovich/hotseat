@@ -6,4 +6,4 @@ depends:
   - mart.profile
 @bruin */
 
-COPY (SELECT * FROM mart.profile) TO 'data/profile.json.tmp' (FORMAT JSON);
+COPY (SELECT * FROM mart.profile ORDER BY candidate_id) TO 'data/profile.json.tmp' (FORMAT JSON);

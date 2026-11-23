@@ -14,6 +14,6 @@ columns:
       - name: unique
 @bruin */
 
-SELECT session_id, ts, overall, verdict
+SELECT candidate_id, session_id, ts, overall, verdict
 FROM raw.sessions
-ORDER BY ts
+ORDER BY candidate_id, ts

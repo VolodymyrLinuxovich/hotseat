@@ -5,6 +5,10 @@ description: One row per finished interview with the panel verdict, from data/se
 materialization:
   type: table
 columns:
+  - name: candidate_id
+    type: varchar
+    checks:
+      - name: not_null
   - name: session_id
     type: varchar
     checks:
@@ -27,6 +31,7 @@ columns:
 @bruin */
 
 SELECT
+    coalesce(nullif(trim(candidate_id), ''), 'demo') AS candidate_id,
     session_id,
     CAST(ts AS TIMESTAMP) AS ts,
     verdict,
@@ -34,6 +39,6 @@ SELECT
 FROM read_json(
     'data/sessions.jsonl',
     format = 'newline_delimited',
-    columns = {session_id: 'VARCHAR', ts: 'VARCHAR', verdict: 'VARCHAR', overall: 'DOUBLE'}
+    columns = {candidate_id: 'VARCHAR', session_id: 'VARCHAR', ts: 'VARCHAR', verdict: 'VARCHAR', overall: 'DOUBLE'}
 )
 QUALIFY row_number() OVER (PARTITION BY session_id ORDER BY ts DESC) = 1

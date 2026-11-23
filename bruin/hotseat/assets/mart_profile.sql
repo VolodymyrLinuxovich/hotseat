@@ -2,8 +2,8 @@
 name: mart.profile
 type: duckdb.sql
 description: |
-  The candidate weakness profile the interview agents read before the next session.
-  One row. The focus sentence is a deterministic template built from the top weak topic and tag.
+  The weakness profile the interview agents read before a candidate's next session.
+  One row per candidate. The focus sentence is a deterministic template built from the top weak topic and tag.
 materialization:
   type: table
 depends:
@@ -13,71 +13,95 @@ depends:
   - mart.tag_counts
   - mart.session_trend
 custom_checks:
-  - name: profile has exactly one row
-    query: SELECT count(*) FROM mart.profile
-    value: 1
+  - name: one profile row per candidate
+    query: SELECT count(*) - count(DISTINCT candidate_id) FROM mart.profile
+    value: 0
+  - name: every candidate with turns has a profile
+    query: SELECT count(*) FROM (SELECT DISTINCT candidate_id FROM raw.turns) t ANTI JOIN mart.profile p USING (candidate_id)
+    value: 0
+columns:
+  - name: candidate_id
+    type: varchar
+    checks:
+      - name: not_null
 @bruin */
 
 WITH
+cands AS (
+    SELECT candidate_id FROM raw.turns
+    UNION
+    SELECT candidate_id FROM raw.sessions
+),
 weak AS (
-    SELECT topic, avg_score, n FROM mart.topic_stats
-    WHERE avg_score < 3 ORDER BY avg_score ASC, n DESC, topic LIMIT 3
+    SELECT *, row_number() OVER (PARTITION BY candidate_id ORDER BY avg_score ASC, n DESC, topic) AS rn
+    FROM mart.topic_stats WHERE avg_score < 3
 ),
 strong AS (
-    SELECT topic, avg_score, n FROM mart.topic_stats
-    WHERE avg_score >= 4 ORDER BY avg_score DESC, n DESC, topic LIMIT 3
+    SELECT *, row_number() OVER (PARTITION BY candidate_id ORDER BY avg_score DESC, n DESC, topic) AS rn
+    FROM mart.topic_stats WHERE avg_score >= 4
 ),
 tags AS (
-    SELECT tag, count FROM mart.tag_counts
-    ORDER BY count DESC, tag LIMIT 3
+    SELECT *, row_number() OVER (PARTITION BY candidate_id ORDER BY count DESC, tag) AS rn
+    FROM mart.tag_counts
 ),
-top_weak AS (SELECT * FROM weak ORDER BY avg_score ASC, n DESC, topic LIMIT 1),
--- Prefer the tag that shows up most on the weakest topic, so the focus line is coherent.
+top_weak AS (SELECT candidate_id, topic, avg_score, n FROM weak WHERE rn = 1),
+-- Prefer the tag that shows up most on the candidate's weakest topic, so the focus line is coherent.
 topic_tag AS (
-    SELECT tag, count(*)::INTEGER AS count
-    FROM (SELECT unnest(tags) AS tag FROM raw.turns
-          WHERE score <= 3 AND topic = (SELECT topic FROM top_weak))
-    WHERE tag IS NOT NULL AND tag <> ''
-    GROUP BY tag
+    SELECT t.candidate_id, t.tag, count(*)::INTEGER AS count
+    FROM (SELECT candidate_id, topic, unnest(tags) AS tag FROM raw.turns WHERE score <= 3) t
+    JOIN top_weak w ON w.candidate_id = t.candidate_id AND w.topic = t.topic
+    WHERE t.tag IS NOT NULL AND t.tag <> ''
+    GROUP BY t.candidate_id, t.tag
 ),
 top_tag AS (
-    SELECT tag, count FROM (
-        SELECT tag, count, 0 AS pri FROM topic_tag
+    SELECT candidate_id, tag, count FROM (
+        SELECT candidate_id, tag, count, 0 AS pri FROM topic_tag
         UNION ALL
-        SELECT tag, count, 1 AS pri FROM tags
-    ) ORDER BY pri, count DESC, tag LIMIT 1
+        SELECT candidate_id, tag, count, 1 AS pri FROM tags
+    )
+    QUALIFY row_number() OVER (PARTITION BY candidate_id ORDER BY pri, count DESC, tag) = 1
 ),
-hint AS (
-    SELECT CASE (SELECT tag FROM top_tag)
-        WHEN 'no_numbers' THEN 'press for quantified impact with concrete numbers'
-        WHEN 'vague' THEN 'press for one specific example with names, dates and outcomes'
-        WHEN 'deflects' THEN 'press on what they personally owned and got wrong'
-        WHEN 'shallow' THEN 'push one level deeper into root causes and tradeoffs'
-        WHEN 'rambling' THEN 'ask for the answer in two sentences first'
-        WHEN 'no_tradeoffs' THEN 'ask what they gave up and why'
-        ELSE 'press for concrete specifics'
-    END AS h
+base AS (
+    SELECT
+        c.candidate_id,
+        w.topic AS w_topic, w.avg_score AS w_avg, w.n AS w_n,
+        tt.tag AS t_tag, tt.count AS t_count,
+        CASE tt.tag
+            WHEN 'no_numbers' THEN 'press for quantified impact with concrete numbers'
+            WHEN 'vague' THEN 'press for one specific example with names, dates and outcomes'
+            WHEN 'deflects' THEN 'press on what they personally owned and got wrong'
+            WHEN 'shallow' THEN 'push one level deeper into root causes and tradeoffs'
+            WHEN 'rambling' THEN 'ask for the answer in two sentences first'
+            WHEN 'no_tradeoffs' THEN 'ask what they gave up and why'
+            WHEN 'incomplete_code' THEN 'give a coding warmup and ask them to test edge cases out loud'
+            WHEN 'we_not_i' THEN 'ask what they personally did, not the team'
+            ELSE 'press for concrete specifics'
+        END AS hint
+    FROM cands c
+    LEFT JOIN top_weak w ON w.candidate_id = c.candidate_id
+    LEFT JOIN top_tag tt ON tt.candidate_id = c.candidate_id
 )
 SELECT
-    (SELECT count(*) FROM raw.sessions)::INTEGER AS sessions,
-    (SELECT count(*) FROM raw.turns)::INTEGER AS turns,
-    coalesce((SELECT list({'topic': topic, 'avg_score': avg_score, 'n': n} ORDER BY avg_score ASC, n DESC, topic) FROM weak), []) AS weak_topics,
-    coalesce((SELECT list({'tag': tag, 'count': count} ORDER BY count DESC, tag) FROM tags), []) AS weak_tags,
-    coalesce((SELECT list({'topic': topic, 'avg_score': avg_score, 'n': n} ORDER BY avg_score DESC, n DESC, topic) FROM strong), []) AS strong_topics,
-    coalesce((SELECT list({'session_id': session_id, 'overall': overall, 'verdict': verdict} ORDER BY ts) FROM mart.session_trend), []) AS trend,
+    b.candidate_id,
+    (SELECT count(*) FROM raw.sessions s WHERE s.candidate_id = b.candidate_id)::INTEGER AS sessions,
+    (SELECT count(*) FROM raw.turns t WHERE t.candidate_id = b.candidate_id)::INTEGER AS turns,
+    coalesce((SELECT list({'topic': topic, 'avg_score': avg_score, 'n': n} ORDER BY rn) FROM weak x WHERE x.candidate_id = b.candidate_id AND rn <= 3), []) AS weak_topics,
+    coalesce((SELECT list({'tag': tag, 'count': count} ORDER BY rn) FROM tags x WHERE x.candidate_id = b.candidate_id AND rn <= 3), []) AS weak_tags,
+    coalesce((SELECT list({'topic': topic, 'avg_score': avg_score, 'n': n} ORDER BY rn) FROM strong x WHERE x.candidate_id = b.candidate_id AND rn <= 3), []) AS strong_topics,
+    coalesce((SELECT list({'session_id': session_id, 'overall': overall, 'verdict': verdict} ORDER BY ts) FROM mart.session_trend x WHERE x.candidate_id = b.candidate_id), []) AS trend,
     CASE
-        WHEN (SELECT count(*) FROM top_weak) = 1 AND (SELECT count(*) FROM top_tag) = 1 THEN
-            'Candidate is weakest on ' || replace((SELECT topic FROM top_weak), '_', ' ')
-            || ' questions (avg ' || printf('%.1f', (SELECT avg_score FROM top_weak)) || '/5 over '
-            || (SELECT n FROM top_weak) || ' answers), and those answers keep getting tagged '
-            || replace((SELECT tag FROM top_tag), '_', ' ') || ' (' || (SELECT count FROM top_tag)
-            || 'x); ' || (SELECT h FROM hint) || '.'
-        WHEN (SELECT count(*) FROM top_weak) = 1 THEN
-            'Candidate is weakest on ' || replace((SELECT topic FROM top_weak), '_', ' ')
-            || ' questions (avg ' || printf('%.1f', (SELECT avg_score FROM top_weak)) || '/5); dig into that topic early.'
-        WHEN (SELECT count(*) FROM top_tag) = 1 THEN
+        WHEN b.w_topic IS NOT NULL AND b.t_tag IS NOT NULL THEN
+            'Candidate is weakest on ' || replace(b.w_topic, '_', ' ')
+            || ' questions (avg ' || printf('%.1f', b.w_avg) || '/5 over '
+            || b.w_n || ' answers), and those answers keep getting tagged '
+            || replace(b.t_tag, '_', ' ') || ' (' || b.t_count || 'x); ' || b.hint || '.'
+        WHEN b.w_topic IS NOT NULL THEN
+            'Candidate is weakest on ' || replace(b.w_topic, '_', ' ')
+            || ' questions (avg ' || printf('%.1f', b.w_avg) || '/5); dig into that topic early.'
+        WHEN b.t_tag IS NOT NULL THEN
             'No topic averages below 3, but answers keep getting tagged '
-            || replace((SELECT tag FROM top_tag), '_', ' ') || '; ' || (SELECT h FROM hint) || '.'
-        ELSE 'No history yet; run a balanced first interview across all topics.'
+            || replace(b.t_tag, '_', ' ') || '; ' || b.hint || '.'
+        ELSE 'No weak spots yet; run a balanced interview and raise the difficulty.'
     END AS focus,
     strftime(now() AT TIME ZONE 'UTC', '%Y-%m-%dT%H:%M:%SZ') AS generated_at
+FROM base b

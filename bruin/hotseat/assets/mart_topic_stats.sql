@@ -1,17 +1,24 @@
 /* @bruin
 name: mart.topic_stats
 type: duckdb.sql
-description: Average score per interview topic across all sessions.
+description: Average score per candidate and interview topic across all their sessions.
 materialization:
   type: table
 depends:
   - raw.turns
+custom_checks:
+  - name: one row per candidate and topic
+    query: SELECT count(*) - count(DISTINCT candidate_id || '#' || topic) FROM mart.topic_stats
+    value: 0
 columns:
+  - name: candidate_id
+    type: varchar
+    checks:
+      - name: not_null
   - name: topic
     type: varchar
     checks:
       - name: not_null
-      - name: unique
   - name: avg_score
     type: double
     checks:
@@ -26,8 +33,9 @@ columns:
 @bruin */
 
 SELECT
+    candidate_id,
     topic,
     round(avg(score), 2) AS avg_score,
     count(*)::INTEGER AS n
 FROM raw.turns
-GROUP BY topic
+GROUP BY candidate_id, topic
