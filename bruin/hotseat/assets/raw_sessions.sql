@@ -1,0 +1,39 @@
+/* @bruin
+name: raw.sessions
+type: duckdb.sql
+description: One row per finished interview with the panel verdict, from data/sessions.jsonl.
+materialization:
+  type: table
+columns:
+  - name: session_id
+    type: varchar
+    checks:
+      - name: not_null
+      - name: unique
+  - name: verdict
+    type: varchar
+    checks:
+      - name: not_null
+      - name: accepted_values
+        value: [hire, no_hire, lean_hire, lean_no_hire]
+  - name: overall
+    type: double
+    checks:
+      - name: not_null
+      - name: min
+        value: 1
+      - name: max
+        value: 5
+@bruin */
+
+SELECT
+    session_id,
+    CAST(ts AS TIMESTAMP) AS ts,
+    verdict,
+    overall
+FROM read_json(
+    'data/sessions.jsonl',
+    format = 'newline_delimited',
+    columns = {session_id: 'VARCHAR', ts: 'VARCHAR', verdict: 'VARCHAR', overall: 'DOUBLE'}
+)
+QUALIFY row_number() OVER (PARTITION BY session_id ORDER BY ts DESC) = 1

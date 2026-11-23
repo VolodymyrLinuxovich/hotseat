@@ -1,0 +1,7 @@
+default_environment: default
+environments:
+  default:
+    connections:
+      duckdb:
+        - name: hotseat-duckdb
+          path: ../data/hotseat.duckdb

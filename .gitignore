@@ -1,0 +1,14 @@
+node_modules
+.tools
+.env
+dist
+data/*.duckdb*
+.bruin-cache
+logs
+
+logs/runs
+__pycache__/
+*.py[cod]
+data/*.jsonl
+data/profile.json
+data/*.tmp
