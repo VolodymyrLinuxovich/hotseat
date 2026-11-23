@@ -528,7 +528,24 @@ onmessage = (e) => {
 };`;
 const workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
 
-function runTests() {
+// Python runs in a long-lived Pyodide worker (loading takes a few seconds), restarted after a timeout.
+let lang = localStorage.getItem("hotseat_lang") || "python";
+let pyWorker = null;
+let pyReady = false;
+function startPyWorker() {
+  pyReady = false;
+  pyWorker = new Worker("/py-worker.js");
+  pyWorker.addEventListener("message", (e) => {
+    if (e.data && e.data.ready) {
+      pyReady = true;
+      if (problem && lang === "python") {
+        $("testSummary").textContent = `Python ready · ${problem.tests.length} hidden tests`;
+      }
+    }
+  });
+}
+
+function runJs() {
   return new Promise((resolve) => {
     const w = new Worker(workerUrl);
     const timer = setTimeout(() => {
@@ -543,6 +560,71 @@ function runTests() {
     w.postMessage({ code: codeEl.value, fn: problem.function_name, tests: problem.tests });
   });
 }
+
+function runPy() {
+  if (!pyWorker) {
+    startPyWorker();
+  }
+  return new Promise((resolve) => {
+    const w = pyWorker;
+    let timer = null;
+    const onMsg = (e) => {
+      const d = e.data || {};
+      if (d.ready) {
+        return;
+      }
+      if (d.started) {
+        // The clock starts once Pyodide is loaded, so load time never counts against the candidate.
+        timer = setTimeout(() => {
+          w.removeEventListener("message", onMsg);
+          w.terminate();
+          startPyWorker();
+          resolve({ compileError: "Timed out after 5s (infinite loop?)" });
+        }, 5000);
+        return;
+      }
+      clearTimeout(timer);
+      w.removeEventListener("message", onMsg);
+      resolve(d);
+    };
+    w.addEventListener("message", onMsg);
+    w.postMessage({ code: codeEl.value, fn: problem.function_name, tests: problem.tests });
+  });
+}
+
+function runTests() {
+  if (lang === "python") {
+    if (!pyReady) {
+      $("testSummary").textContent = "Loading Python…";
+    }
+    return runPy();
+  }
+  return runJs();
+}
+
+function setLang(next) {
+  if (problem && codeEl.value.trim() !== starterFor(lang).trim() && !confirm("Switch language? Your current code will be replaced by the starter.")) {
+    $("langSel").value = lang;
+    return;
+  }
+  lang = next;
+  localStorage.setItem("hotseat_lang", lang);
+  $("langPill").textContent = `LIVE CODING · ${lang === "python" ? "Python" : "JavaScript"}`;
+  if (problem) {
+    codeEl.value = starterFor(lang);
+  }
+  if (lang === "python" && !pyWorker) {
+    startPyWorker();
+  }
+}
+function starterFor(l) {
+  if (!problem) {
+    return "";
+  }
+  return l === "python" ? problem.starter_code_python : problem.starter_code;
+}
+$("langSel").value = lang;
+$("langSel").addEventListener("change", (e) => setLang(e.target.value));
 
 $("runBtn").onclick = async () => {
   $("testSummary").textContent = "Running…";
@@ -566,7 +648,7 @@ $("submitCode").onclick = async () => {
     ? `Code did not run: ${r.compileError}`
     : `${r.results.filter((x) => x.pass).length}/${r.results.length} hidden tests passed. Failures: ${r.results.filter((x) => !x.pass).map((x) => `args ${x.args} expected ${x.expected} got ${x.got}`).join("; ") || "none"}`;
   const notes = answerBox.value.trim();
-  answerBox.value = `[LIVE CODING: ${problem.title}]\n${codeEl.value}\n\n[JUDGE] ${summary}${notes ? `\n[CANDIDATE EXPLANATION] ${notes}` : ""}`;
+  answerBox.value = `[LIVE CODING: ${problem.title} · language: ${lang === "python" ? "Python" : "JavaScript"}]\n${codeEl.value}\n\n[JUDGE] ${summary}${notes ? `\n[CANDIDATE EXPLANATION] ${notes}` : ""}`;
   $("ide").classList.add("hidden");
   $("dock").classList.remove("hidden");
   problem = null;
@@ -577,8 +659,13 @@ function openIde(p) {
   problem = p;
   $("pTitle").textContent = p.title;
   $("pDesc").textContent = p.description;
-  codeEl.value = p.starter_code;
+  $("langSel").value = lang;
+  $("langPill").textContent = `LIVE CODING · ${lang === "python" ? "Python" : "JavaScript"}`;
+  codeEl.value = starterFor(lang);
   $("testSummary").textContent = `${p.tests.length} hidden tests`;
+  if (lang === "python" && !pyWorker) {
+    startPyWorker();
+  }
   $("testList").innerHTML = "";
   $("ide").classList.remove("hidden");
   $("dock").classList.add("hidden");

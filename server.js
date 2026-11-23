@@ -75,6 +75,7 @@ const ProblemSchema = z.object({
   description: z.string(),
   function_name: z.string(),
   starter_code: z.string(),
+  starter_code_python: z.string(),
   tests: z.array(z.object({ args_json: z.string(), expected_json: z.string() })),
 });
 
@@ -87,8 +88,8 @@ async function genProblem(s, difficulty) {
     model: MODEL,
     max_tokens: 4000,
     system: `You write a live coding problem, HackerRank style, for a ${s.role} interview. Theo the Tech Lead will introduce it.
-Difficulty ${difficulty}/5 (1 = warmup like reverse words, 3 = classic medium like two-sum or valid parentheses, 5 = harder like interval merge or LRU logic). It must be solvable in about 8 minutes in plain JavaScript.
-Return: title; spoken_intro (Theo says it aloud, under 30 words, no code); description (clear statement with one example, plain text); function_name; starter_code (a JavaScript function stub with that name and parameters and an empty body with a comment); tests: 6 test cases, each with args_json (a JSON array of arguments) and expected_json (JSON of the expected return value). Include edge cases. Make sure every expected value is correct.`,
+Difficulty ${difficulty}/5 (1 = warmup like reverse words, 3 = classic medium like two-sum or valid parentheses, 5 = harder like interval merge or LRU logic). It must be solvable in about 8 minutes in plain Python or JavaScript (the candidate picks).
+Return: title; spoken_intro (Theo says it aloud, under 30 words, no code); description (clear statement with one example, plain text); function_name (snake_case, valid in both languages); starter_code (a JavaScript function stub with that name and parameters and an empty body with a comment); starter_code_python (a Python def stub with the same name and parameters, a comment, and pass); arguments and return values must be plain JSON types (numbers, strings, booleans, lists, objects) so both languages compare the same way; tests: 6 test cases, each with args_json (a JSON array of arguments) and expected_json (JSON of the expected return value). Include edge cases. Make sure every expected value is correct.`,
     messages: [{ role: "user", content: `Scores so far: ${past || "none"}. Make the problem.` }],
     output_config: { effort: "low", format: zodOutputFormat(ProblemSchema) },
   });

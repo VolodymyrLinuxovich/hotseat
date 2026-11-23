@@ -89,3 +89,5 @@ button:disabled { opacity: .45; cursor: default; }
 .t { font: 12px ui-monospace, Menlo, monospace; padding: 4px 8px; border-radius: 6px; background: #241f1b; }
 .t.pass { background: #203a2a; color: #a8e6bd; }
 .t.fail { background: #4a2620; color: #ffb4a3; }
+
+#langSel { margin-left: auto; width: auto; padding: 6px 10px; border-radius: 8px; border: 1px solid #3a322b; background: #1d1916; color: #f3ece2; font: inherit; font-size: 13px; }

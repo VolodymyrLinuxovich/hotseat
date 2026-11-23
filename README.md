@@ -13,6 +13,7 @@ into a **memory profile**, so the next panel opens on your known weak spots.
 <br/>
 
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Python](https://img.shields.io/badge/Python_via_Pyodide-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Three.js](https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=threedotjs&logoColor=white)
 ![Claude](https://img.shields.io/badge/Claude_API-D97757?style=for-the-badge&logo=anthropic&logoColor=white)
 ![Bruin](https://img.shields.io/badge/Bruin-1F6FEB?style=for-the-badge)
@@ -144,8 +145,9 @@ sequenceDiagram
 
    All of it goes into the **Panel ledger**, so you can see what the agents decided and why.
 4. **Live coding round.** On question 3 Theo generates a problem at your level (difficulty follows your average so
-   far) with 6 hidden tests. You write JavaScript in the editor. Tests run in a sandboxed Web Worker with a 3 second
-   timeout, so an infinite loop can't freeze the page. Your code and the judge's report go to the panel like any
+   far) with 6 hidden tests. You write **Python** (the default) or JavaScript. Python runs in the browser through
+   **Pyodide** (CPython compiled to WebAssembly), JavaScript in a plain Web Worker. Both are sandboxed with a timeout,
+   so an infinite loop can't freeze the page, and both run the exact same hidden tests. Your code and the judge's report go to the panel like any
    other answer.
 5. **Verdict.** Each interviewer votes hire or no hire with one reason and an **exact quote** from your answers.
    You get the panel verdict, strengths, growth areas each with evidence and a practice drill, and Maya says the
@@ -194,7 +196,7 @@ showing the bids, turns "who asks next" into a decision you can watch instead of
 **Evidence or it didn't happen.** Every vote must quote the candidate exactly. Feedback you can check is feedback you
 can act on.
 
-**The judge runs in the browser.** Hidden tests run in a Web Worker with a hard timeout. No code execution server, no
+**The judge runs in the browser.** Hidden tests run in a Web Worker with a hard timeout, Python through Pyodide. No code execution server, no
 setup, and nothing the candidate writes touches the backend.
 
 **Memory in a pipeline, not a prompt.** Past sessions go through Bruin into DuckDB with quality checks, and the agents
@@ -242,6 +244,7 @@ Use Chrome for speech input. Typing works in every browser.
 |------|------|
 | `server.js` | Panel turn, coding problem, verdict, per-candidate memory, Bruin queue |
 | `src/main.js` | Scene, avatars, animation, voices, speech input, ledger, coding judge, verdict screen |
+| `public/py-worker.js` | Python judge: Pyodide in a Web Worker, runs the hidden tests |
 | `src/style.css`, `index.html` | The UI |
 | `bruin/run.sh` | Runs the pipeline and swaps in the new profile |
 | `bruin/hotseat/assets/` | The 7 SQL assets and their checks |
@@ -252,7 +255,7 @@ Use Chrome for speech input. Typing works in every browser.
 ## Limits
 
 - Speech recognition and voices come from the browser, so they sound best in Chrome on macOS.
-- The coding round is JavaScript only.
+- The coding round supports Python and JavaScript. Python loads Pyodide from a CDN the first time, about a second.
 - Candidates are identified by the name they type. That is fine for practice, not for anything private.
 - The panel's scores are one model's judgment. The quotes keep them checkable, but they are not a real hiring
   decision.
