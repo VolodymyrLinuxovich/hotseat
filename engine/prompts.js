@@ -1,6 +1,7 @@
 // Prompt text for the panel, the coding problem, and the verdict.
 
 import { AGENT_IDS, AGENTS, describeAgent } from "./agents.js";
+import { attentionLine } from "./checks.js";
 import { CODING_ROUND, MAX_QUESTIONS, MAX_QUESTION_WORDS } from "./config.js";
 
 const PANEL_LIST = AGENT_IDS.map((id) => `- ${describeAgent(id)}`).join("\n");
@@ -91,6 +92,8 @@ Each turn you do three things:
 1. assessment: score the candidate's LAST answer 1-5 (5 = specific, quantified, owns the outcome; 1 = vague or evasive). topic is one snake_case word for what was tested (e.g. metrics, system_design, conflict, ownership, debugging, tradeoffs, motivation). tags are 1-3 snake_case habits seen (e.g. no_numbers, vague, rambling, strong_example, clear_tradeoffs, we_not_i). note is one short sentence. Use null for assessment only when there is no answer yet.
 2. deliberation: exactly three short lines, one per interviewer, as they whisper to each other about the candidate. Each in character, max 18 words, referencing what the candidate actually said. bid is how strongly that interviewer wants to ask next (0-1), driven by their own goal: ${bidRules}.
 3. decision and question: the highest bidder usually asks next (say why in one sentence), sets difficulty 1-5 that adapts to performance (raise after strong answers, press on weak spots), and writes the next question in that interviewer's voice. The question is spoken aloud, so keep it under ${MAX_QUESTION_WORDS} words, no lists, no markdown.
+Coding answers carry the code, the judge's report, an [INTEGRITY] line from the editor, and the [TALK-THROUGH] with Theo. Score the whole thing: clear explanation of the approach and good clarifying questions earn credit, and silence or a pasted solution the candidate never explained costs points. When the integrity line notes a large paste, Theo's whisper mentions it and he asks the candidate to walk him through the part they pasted.
+An [ATTENTION] line means the candidate stepped away from the screen for a while: you may mention a long absence neutrally (for example, asking if everything is okay), weigh it lightly, and never accuse them of cheating.
 Rotate askers so all three speak over the session. Never assume the candidate's gender: refer to them as "they" or "the candidate". moods reflect each interviewer's current reaction.`;
 }
 
@@ -100,7 +103,8 @@ export function transcriptText(session) {
   }
 
   const lines = session.turns.map((t, i) => {
-    return `Q${i + 1} (${t.asker}, difficulty ${t.difficulty}): ${t.question}\nCandidate: ${t.answer ?? "(no answer yet)"}`;
+    const attention = t.attention ? `\n${attentionLine(t.attention)}` : "";
+    return `Q${i + 1} (${t.asker}, difficulty ${t.difficulty}): ${t.question}\nCandidate: ${t.answer ?? "(no answer yet)"}${attention}`;
   });
   const next = session.turns.length + 1;
 
@@ -132,7 +136,9 @@ export function verdictSystem(session) {
   return `You are the closing deliberation of an interview panel for ${session.role}:
 ${PANEL_LIST}
 Each interviewer votes hire or no_hire with one reason and an exact short quote from the candidate as evidence. Then give the panel verdict, overall score 1-5 (one decimal), 2-3 strengths, 2-3 growth areas each with an exact evidence quote and one concrete practice drill, a 2 sentence summary, and spoken_verdict: what the manager says aloud to the candidate, under 45 words, kind and honest.
-Quotes must be copied word for word from the candidate's answers. Never invent evidence. Refer to the candidate as "they", never he or she.`;
+For the coding round, weigh the [INTEGRITY] line (a large paste the candidate couldn't explain is a red flag) and the [TALK-THROUGH] with Theo (how they communicated while coding).
+[ATTENTION] lines count for very little: never accuse the candidate over them.
+Quotes must be copied word for word from the candidate's answers, never from Theo's lines. Never invent evidence. Refer to the candidate as "they", never he or she.`;
 }
 
 export function verdictTranscript(answered) {
@@ -141,9 +147,9 @@ export function verdictTranscript(answered) {
   }
 
   return answered
-    .map(
-      (t, i) =>
-        `Q${i + 1} (${t.asker}, topic ${t.topic}, score ${t.score ?? "?"}): ${t.question}\nCandidate: ${t.answer}`,
-    )
+    .map((t, i) => {
+      const attention = t.attention ? `\n${attentionLine(t.attention)}` : "";
+      return `Q${i + 1} (${t.asker}, topic ${t.topic}, score ${t.score ?? "?"}): ${t.question}\nCandidate: ${t.answer}${attention}`;
+    })
     .join("\n\n");
 }

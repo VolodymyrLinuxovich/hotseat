@@ -13,3 +13,5 @@ data/*.jsonl
 data/profile.json
 data/*.tmp
 .vercel
+native/bench
+.venv

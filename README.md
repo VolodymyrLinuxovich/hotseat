@@ -4,11 +4,13 @@
 
 # Hotseat
 
-**An interview panel that argues about you and remembers you.** Three AI interviewers sit across a 3D table. After
-every answer they **score it, whisper about you in character, and bid for the next question**. The panel raises the
-difficulty when you're strong and presses where you're weak. Question 3 is a **live coding round with hidden tests**.
-At the end each interviewer **votes with a quote from your own answers**. A **Bruin pipeline** turns every session
-into a **memory profile**, so the next panel opens on your known weak spots.
+**An interview panel that argues about you and remembers you.** You walk through a door into a 3D room where three
+AI interviewers wait at a table. After every answer they **score it, whisper about you in character, and bid for the
+next question**, each in their own voice. A **C++ engine** estimates your ability and sets the next difficulty.
+Question 3 is a **live coding round** where you talk your approach through with the Tech Lead while hidden tests judge
+your code. At the end each interviewer **votes with a quote from your own answers**, every quote checked against what
+you really said. A **Bruin pipeline** and a **model we trained** learn from each session, so the next panel knows
+which habits you fixed and which ones you keep repeating.
 
 <br/>
 
@@ -20,7 +22,10 @@ into a **memory profile**, so the next panel opens on your known weak spots.
 ![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=for-the-badge&logo=duckdb&logoColor=black)
 ![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![Web Speech API](https://img.shields.io/badge/Web_Speech_API-4285F4?style=for-the-badge)
+![C++](https://img.shields.io/badge/C%2B%2B_to_WebAssembly-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini_voices-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-0097A7?style=for-the-badge)
 
 <br/>
 
@@ -40,9 +45,12 @@ into a **memory profile**, so the next panel opens on your known weak spots.
 
 | Where | What you'll find |
 |------|------------------|
-| `server.js` | The panel: scoring, whispers, floor bids, coding problems, verdict, Bruin trigger |
-| `src/main.js` | The 3D room, the three avatars, voices, speech input, ledger, in-browser judge |
+| [Live demo](https://hotseat-swart.vercel.app) | The full interview in your browser (memory runs on a local install) |
+| `engine/` | The interview engine: panel, checks, trained critic, C++ core, coding chat, voices, transcription |
+| `src/` | The 3D room, voices, speech input, coding round, attention tracking, ledger, score card |
 | `bruin/` | The memory pipeline: 9 DuckDB assets, 55 quality checks |
+| `native/` | The C++ core and its WebAssembly build |
+| `train/` | The answer critic's trainer and data |
 
 ---
 
@@ -77,33 +85,46 @@ when impressed, Sol tilts their head when skeptical, and all three lean in to co
 
 ```mermaid
 flowchart LR
-    subgraph UI["Browser"]
-        R[3D room<br/>Three.js]
-        V[Voices + speech input<br/>Web Speech API]
-        L[Panel ledger]
-        J[Coding judge<br/>sandboxed Web Worker]
+    subgraph BR["Browser"]
+        SC[3D room<br/>Three.js, door and exit scenes]
+        VO[Voice queue<br/>one speaker at a time]
+        LI[Speech input<br/>recorded, then transcribed]
+        CO[Coding round<br/>Pyodide and JS judge, talk-through]
+        GZ[Attention<br/>MediaPipe, stays in the browser]
+        LG[Panel ledger<br/>and score card]
     end
 
-    subgraph API["Server"]
-        P[Panel turn<br/>score, whispers, bids, next question]
-        G[Coding problem<br/>with hidden tests]
-        VD[Verdict<br/>votes with quotes]
+    subgraph EN["Engine (server)"]
+        PN[Panel turn<br/>score, whispers, bids, question]
+        CK[Checks<br/>repair every model output]
+        CR[Trained critic<br/>second opinion on each score]
+        CPP[C++ core in WebAssembly<br/>ability, confidence, quote alignment]
+        CC[Coding chat<br/>Theo, never writes code]
+        VD[Verdict<br/>votes with checked quotes]
+        TT[Voices and transcription<br/>Gemini]
     end
 
     subgraph MEM["Memory"]
-        JS[(turns.jsonl<br/>sessions.jsonl)]
-        BR[Bruin pipeline<br/>DuckDB, 55 checks]
-        PF[(profile per candidate)]
+        LOG[(turns.jsonl<br/>sessions.jsonl)]
+        BRU[Bruin pipeline<br/>DuckDB, 55 checks]
+        PRO[(profile per candidate<br/>fixed vs repeating)]
+        RT[Critic retrain<br/>scikit-learn]
     end
 
-    R --> P
-    V --> P
-    J --> P
-    P --> L
-    P --> G
-    P --> VD
-    VD --> JS --> BR --> PF
-    PF --> P
+    LI --> TT
+    TT --> VO
+    CO --> CC
+    SC --> PN
+    GZ --> PN
+    PN --> CK
+    CK --> CR
+    CK --> CPP
+    CK --> LG
+    VD --> CPP
+    VD --> LOG
+    LOG --> BRU --> PRO
+    BRU --> RT --> CR
+    PRO --> PN
 ```
 
 ### One turn
@@ -112,31 +133,36 @@ flowchart LR
 sequenceDiagram
     participant C as Candidate
     participant B as Browser
-    participant S as Server
+    participant S as Engine
+    participant K as Checks, critic, C++ core
     participant M as Bruin memory
 
-    C->>B: speaks or types an answer
-    B->>S: answer
+    C->>B: speaks (recorded) or types
+    B->>S: answer, transcript, attention summary
     Note over B: avatars lean in and confer
-    S->>S: score 1-5, topic, habit tags
-    S->>S: three whispers + three floor bids
-    S->>S: highest bidder asks, difficulty adapts
-    S-->>B: ledger entry + next question
-    B->>C: whispers play, asker speaks in their own voice
+    S->>S: score, habit tags, three whispers, three bids
+    S->>K: every field checked and repaired
+    K->>K: critic scores the answer on its own
+    K->>K: C++ core updates ability, suggests difficulty
+    K-->>S: fixes and notes for the ledger
+    S-->>B: ledger entry and next question
+    B->>C: bid meters fill, winner takes the floor and speaks
     Note over S,M: after question 5
-    S->>S: votes with quotes, verdict
-    S->>M: append session, run pipeline
-    M-->>S: updated profile for this candidate
+    S->>K: verdict quotes aligned to real answers, score interval
+    S->>M: log session, run pipeline, retrain critic
+    M-->>S: profile with fixed and repeating habits
 ```
 
 ---
 
 ## How It Works
 
-1. **Sit down.** Enter your name and the role. If the panel has met you before, the start screen shows your Bruin
-   memory: weakest topics, repeated habits, strongest topics.
-2. **Answer.** Speak (Chrome speech recognition) or type. While the server thinks, the three avatars lean in and
-   confer.
+1. **Walk in.** Enter your name and the role, then the camera walks you down a hallway, through the door and into your
+   seat while the panel looks up. If they've met you before, the start screen shows your Bruin memory: weakest topics,
+   repeated habits, strongest topics. Your webcam appears as a small self view.
+2. **Answer.** Click Speak and talk, or type. Your answer is recorded and transcribed accurately, with the browser's
+   live text only as a preview. The panel stops talking the moment you start. While the engine thinks, the three
+   avatars lean in and confer. Each interviewer speaks in their own voice, one at a time.
 3. **The panel decides, in the open.** One structured call returns:
    - a **score** for your answer, its **topic** and **habit tags** (`no_numbers`, `vague`, `we_not_i`, `strong_example`...)
    - three in-character **whispers**, one per interviewer
@@ -149,11 +175,66 @@ sequenceDiagram
    **Pyodide** (CPython compiled to WebAssembly), JavaScript in a plain Web Worker. Both are sandboxed with a timeout,
    so an infinite loop can't freeze the page, and both run the exact same hidden tests. Your code and the judge's report go to the panel like any
    other answer.
+   - **Talk it through.** A chat beside the editor lets you type or speak to Theo. He opens by asking for your approach,
+     answers clarifying questions honestly, reacts to your plan, and gives a hint only when you ask or are stuck. He never
+     writes the code. The whole talk-through goes to the panel with your submission.
+   - **Integrity.** The editor counts typed and pasted characters, the largest single paste, test runs and time to
+     submit. A large paste shows a note in the editor, the panel sees a summary, and Theo asks you to walk him through
+     the part you pasted.
+   - If your function prints its answer or returns `None`, the judge says so instead of just failing the tests.
 5. **Verdict.** Each interviewer votes hire or no hire with one reason and an **exact quote** from your answers.
-   You get the panel verdict, strengths, growth areas each with evidence and a practice drill, and Maya says the
-   verdict out loud.
+   Maya says the verdict out loud, then you stand up and walk out, and the frame freezes on a score card: the verdict,
+   the score with its 95% interval, three vote cards, and folding sections for strengths, what to work on (each with
+   your words and a practice drill), engine checks, attention, and your trend. "Come back in" walks you through the
+   door again.
 6. **Memory.** The session is appended to the log and the Bruin pipeline runs. Next time you sit down under the same
    name, the panel reads your profile and opens on your weak spots. It also notices when you fix an old habit.
+
+---
+
+## The Engine
+
+Every model output passes through `engine/checks.js` before you see it. Each check repairs what it can and leaves a
+short note in the ledger, so you can see where the engine stepped in.
+
+| Check | What it does |
+|---|---|
+| Coding tests | Runs a hidden reference solution on every generated test and drops any test it disagrees with. Two failed problems in a row fall back to a verified backup problem |
+| Real quotes | Any verdict quote you never said is replaced with your closest real words, found by the C++ aligner |
+| Votes and verdict | One vote per interviewer; a verdict can't contradict a unanimous vote; the score stays in range |
+| Floor rules | One whisper per interviewer, nobody asks three times in a row, the coding round always goes to Theo |
+| Score sanity | A 5 with a "no numbers" tag, or a 1 with only strong tags, is pulled back to 3 |
+| Habit vocabulary | Synonym tags map onto one set, so memory counts "lacks metrics" and "no numbers" as the same habit |
+| Repeats and coverage | Flags a question that repeats an earlier one, and nudges the panel toward topics not yet covered |
+| Spoken text | Strips formatting and trims long questions at a sentence boundary |
+
+## C++ Core
+
+`native/hotseat_core.cpp` is compiled to WebAssembly (11.8 KB, no imports) with the WASI SDK and runs inside the
+server, locally and on Vercel. A pure JS port gives identical results when WebAssembly isn't available, and tests check
+the two agree.
+
+- **Ability.** An item response model (Rasch, Bayesian with a prior at 3) estimates your ability from each question's
+  difficulty and your score, with its standard error. The next difficulty is where you'd succeed about 60% of the time.
+  The panel sees "[ENGINE] Ability 2.4 ± 0.6. Recommended next difficulty 3." and its pick is kept within one level.
+- **Confidence.** The overall score comes with a 95% interval from 5,000 bootstrap resamples of your answer scores,
+  with a fixed seed so the same interview always gives the same interval.
+- **Quote alignment.** Word level Smith-Waterman alignment finds the span of your answers that best matches a quote,
+  which is how invented quotes get replaced with your real words.
+
+## Attention
+
+With your permission, MediaPipe's face landmarker watches the webcam about six times a second, entirely in the
+browser. It tells looking at the screen from looking away, eyes closed, or gone. Any stretch over 5 seconds becomes an
+event and a quiet note on screen. No video leaves your machine; only the numbers do. The panel sees one line per answer
+("looked at the screen 82%; away 7 s once") and is told to mention long absences neutrally and weigh them lightly.
+
+## Voices and Speech
+
+Maya, Theo and Sol each have their own Gemini voice and speaking style, with OpenAI as a fallback and the browser's
+voice as a last resort. Lines go through one queue, so two interviewers never talk over each other, and the next clip
+downloads while the current one plays. Your answers are recorded and transcribed by Gemini, keeping numbers and
+technical terms exact. Leaving the tab silences the panel and turns the microphone off.
 
 ---
 
@@ -186,6 +267,48 @@ panel hears "Fixed since last time: shallow. Still repeating: vague, no numbers"
 loud and press hard on what keeps coming back.
 
 The full pipeline runs in **under half a second** after each interview.
+
+---
+
+## Trained Critic
+
+The panel's score is one LLM call. The **answer critic** is a small model we trained ourselves that scores every
+answer on its own, as a second opinion. If the two are 2 or more points apart, the ledger says so: "Trained critic
+scored this 4/5, panel gave 1/5. Flagged for review." The critic never overrides the panel. Its score shows quietly
+in the ledger as "Critic: 3/5" with its top habit tags.
+
+- **Data.** 299 labeled answers generated once with Claude (all seven topics, scores 1 to 5, the eight habit tags),
+  plus every real answer in `data/turns.jsonl`, deduplicated.
+- **Model.** TF-IDF over word unigrams and bigrams plus 12 hand-made features (numbers and percentages, "I" versus
+  "we", length, hedge words, technical words, question marks, the coding judge's pass rate). Ridge regression for the
+  score, one logistic regression per tag with a threshold tuned on out-of-fold F1.
+- **Runs in Node.** The fit is exported as 208 KB of JSON and `engine/critic.js` reimplements the math. A test checks
+  the JS predictions match Python's on saved examples.
+- **It learns.** After each Bruin run, `bruin/run.sh` retrains the critic on the seed plus all logged turns (under a
+  second), and the server picks up the new model file on the next answer, no restart.
+
+Honest numbers. On a held-out 20% (64 answers) the score is off by 0.52 on average and within 1 point 92% of the
+time; tag F1 is 0.84 for strong_example, 0.91 for we_not_i, 0.70 for vague, but weak for no_numbers (0.22) and
+rambling (1 test example). The harder test: trained on generated answers only and scored against the 20 real session
+answers, the error is 1.1 points and 75% land within 1. Real answers are shorter and the panel grades them in
+context, which the critic can't see. That gap is exactly why it flags instead of overriding.
+
+## Why Hotseat Wins
+
+| | Hotseat | Final Round AI | Yoodli | Google Interview Warmup | interviewing.io | LeetCode, HackerRank |
+|---|---|---|---|---|---|---|
+| Several interviewers who deliberate in the open | ✓ | | | | | |
+| You can see why each question was chosen | ✓ | | | | | |
+| Difficulty adapts with a measured ability estimate | ✓ | | | | | |
+| Coding with hidden tests | ✓ | | | | ✓ | ✓ |
+| Talk through your code with an interviewer | ✓ | | | | ✓ | |
+| Spoken conversation | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| Feedback quotes your exact words, checked | ✓ | | | | | |
+| Remembers which habits you fixed and which you repeat | ✓ | | | | | |
+| Open source | ✓ | | | | | |
+
+Based on public product pages, November 2026. A blank means we couldn't confirm the feature, not that it's missing.
+interviewing.io's interviews are run by people. The rest are products we haven't tested ourselves.
 
 ---
 
@@ -232,14 +355,18 @@ for the next session moved from metrics to ownership, because that is where the 
 
 ```bash
 npm install
-cp .env.example .env        # add ANTHROPIC_API_KEY
+cp .env.example .env        # ANTHROPIC_API_KEY, plus GEMINI_API_KEY for voices and transcription
 npm run dev                 # API on :8787, app on http://localhost:5173
+npm run check               # formatting and 57 unit tests
 ```
 
-Bruin: put the `bruin` binary in `.tools/bruin`, on your PATH, or set `BRUIN_BIN`. Run the pipeline by hand with
-`bruin/run.sh`.
-
-Use Chrome for speech input. Typing works in every browser.
+- **Bruin:** put the `bruin` binary in `.tools/bruin`, on your PATH, or set `BRUIN_BIN`. Run the pipeline by hand
+  with `bruin/run.sh`.
+- **Critic retraining:** `uv venv .venv && uv pip install --python .venv/bin/python -r train/requirements.txt`.
+  Without it the pipeline still runs and the critic keeps its last model.
+- **C++ core:** the compiled `native/hotseat_core.wasm` is checked in. Rebuild with `npm run build:native` (needs the
+  WASI SDK in `.tools/`).
+- Chrome works best for the camera and microphone. Typing works everywhere.
 
 ---
 
@@ -247,20 +374,31 @@ Use Chrome for speech input. Typing works in every browser.
 
 | Path | What |
 |------|------|
-| `server.js` | Panel turn, coding problem, verdict, per-candidate memory, Bruin queue |
-| `src/main.js` | Scene, avatars, animation, voices, speech input, ledger, coding judge, verdict screen |
-| `public/py-worker.js` | Python judge: Pyodide in a Web Worker, runs the hidden tests |
-| `src/style.css`, `index.html` | The UI |
-| `bruin/run.sh` | Runs the pipeline and swaps in the new profile |
-| `bruin/hotseat/assets/` | The 9 SQL assets and their checks |
-| `bruin/.bruin.yml` | DuckDB connection |
+| `server.js` | HTTP routes only |
+| `engine/panel.js` | Runs a turn: panel call, checks, critic, C++ core, coding problem, verdict, memory |
+| `engine/checks.js` | Every repair and note the ledger shows |
+| `engine/prompts.js`, `engine/schemas.js`, `engine/agents.js` | What each agent is told and the exact shape it must answer in |
+| `engine/core.js`, `native/` | C++ core: WebAssembly loader, JS fallback, source and build script |
+| `engine/critic.js`, `train/` | Trained critic: Node inference, Python trainer, data |
+| `engine/coding.js` | Theo's coding chat and the integrity and talk-through text |
+| `engine/tts.js`, `engine/stt.js` | Voices and transcription |
+| `engine/memory.js` | Session log, profile, Bruin queue |
+| `src/main.js` | Interview flow, ledger, score card |
+| `src/scene.js` | Room, avatars, door entrance, exit, webcam |
+| `src/voice.js`, `src/listen.js` | Voice queue and speech input |
+| `src/coding.js`, `public/py-worker.js` | Coding round and the Python judge |
+| `src/gaze.js` | Attention tracking |
+| `bruin/` | The 9 SQL assets, their checks and `run.sh` |
+| `tests/` | Unit tests for checks, critic and C++ core |
 
 ---
 
 ## Limits
 
-- Speech recognition and voices come from the browser, so they sound best in Chrome on macOS.
-- The coding round supports Python and JavaScript. Python loads Pyodide from a CDN the first time, about a second.
-- Candidates are identified by the name they type. That is fine for practice, not for anything private.
-- The panel's scores are one model's judgment. The quotes keep them checkable, but they are not a real hiring
+- The hosted demo runs the full interview but doesn't keep memory or retrain the critic. Run it locally for that.
+- The critic is honest about its weak spots: it rarely catches answers without numbers (F1 0.22). It only flags,
+  never overrides.
+- Attention tracking needs a camera and works best in good light. It reports, it never accuses.
+- Candidates are identified by the name they type. Fine for practice, not for anything private.
+- The panel's scores are model judgments. The quotes and checks keep them honest, but they are not a real hiring
   decision.

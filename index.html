@@ -62,23 +62,48 @@
     </footer>
 
     <section id="ide" class="hidden">
-      <div class="idehead">
-        <span class="pill" id="langPill">LIVE CODING · Python</span>
-        <h2 id="pTitle"></h2>
-        <select id="langSel" title="Language">
-          <option value="python">Python</option>
-          <option value="javascript">JavaScript</option>
-        </select>
+      <div class="idemain">
+        <div class="idehead">
+          <span class="pill" id="langPill">LIVE CODING · Python</span>
+          <h2 id="pTitle"></h2>
+          <select id="langSel" title="Language">
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+          </select>
+        </div>
+        <pre id="pDesc"></pre>
+        <textarea id="code" spellcheck="false"></textarea>
+        <div id="pasteNote" class="idenote paste hidden"></div>
+        <div id="judgeNote" class="idenote hidden"></div>
+        <div class="idebar">
+          <button id="runBtn">▶ Run tests</button>
+          <span id="testSummary"></span>
+          <button id="submitCode" class="primary">Submit to panel</button>
+        </div>
+        <div id="testList"></div>
       </div>
-      <pre id="pDesc"></pre>
-      <textarea id="code" spellcheck="false"></textarea>
-      <div class="idebar">
-        <button id="runBtn">▶ Run tests</button>
-        <span id="testSummary"></span>
-        <button id="submitCode" class="primary">Submit to panel</button>
-      </div>
-      <div id="testList"></div>
+
+      <aside id="codeChat">
+        <div class="chathead">
+          <b>Talk to Theo</b>
+          <span>Ask about the problem or walk him through your approach</span>
+        </div>
+        <div id="chatLog"></div>
+        <div class="chatinput">
+          <button id="chatMic" title="Speak to Theo">🎙</button>
+          <textarea id="chatBox" rows="2" placeholder="Ask Theo, or explain your plan…"></textarea>
+          <button id="chatSend">Send</button>
+        </div>
+      </aside>
     </section>
+
+    <!-- candidate self view; stays hidden unless camera permission is granted -->
+    <div id="selfview" class="hidden">
+      <video id="selfVideo" autoplay muted playsinline></video>
+      <button id="selfToggle" title="Hide your camera">Hide</button>
+    </div>
+
+    <div id="skipHint" class="hidden">Click to skip</div>
 
     <section id="verdict" class="card center hidden"></section>
 

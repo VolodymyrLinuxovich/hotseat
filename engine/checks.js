@@ -7,6 +7,8 @@ import vm from "node:vm";
 
 import { AGENT_IDS, AGENTS } from "./agents.js";
 import { MAX_QUESTION_WORDS } from "./config.js";
+import { alignWords } from "./core.js";
+import { critique } from "./critic.js";
 
 const MIN_VALID_TESTS = 3;
 const REFERENCE_TIMEOUT_MS = 500;
@@ -164,6 +166,43 @@ export function quoteIsReal(quote, answers) {
   return answers.some((a) => normalizeText(a).includes(q));
 }
 
+// Words of a text with the character range each came from, so an aligned word span can be
+// cut back out of the original answer with its capitals and punctuation intact.
+function wordsWithOffsets(text) {
+  const out = [];
+  for (const match of String(text || "").matchAll(/\S+/g)) {
+    for (const word of normalizeText(match[0]).split(" ").filter(Boolean)) {
+      out.push({ word, from: match.index, to: match.index + match[0].length });
+    }
+  }
+  return out;
+}
+
+// Below this the "closest" span is mostly coincidence, and a whole sentence reads better.
+const MIN_ALIGN_SCORE = 0.4;
+const MIN_ALIGN_WORDS = 3;
+
+// The stretch of the candidate's answers that best lines up with the quote, word for word and
+// in order (local alignment in the C++ core). Unlike closestSentence it keeps word order and
+// can cross a sentence break, so a paraphrase lands on the line it was paraphrasing.
+// Falls back to closestSentence when nothing lines up well enough.
+export function alignedQuote(quote, answers) {
+  const tokens = answers.map(wordsWithOffsets);
+  const quoteWords = normalizeText(quote).split(" ").filter(Boolean);
+  const hit = alignWords(
+    quoteWords,
+    tokens.map((list) => list.map((t) => t.word)),
+  );
+
+  if (hit.answer < 0 || hit.score < MIN_ALIGN_SCORE || hit.end - hit.start < MIN_ALIGN_WORDS) {
+    return closestSentence(quote, answers);
+  }
+
+  const list = tokens[hit.answer];
+  const text = answers[hit.answer].slice(list[hit.start].from, list[hit.end - 1].to);
+  return text.trim().replace(/[,;:]+$/, "");
+}
+
 function stripMarkdown(text) {
   return String(text || "")
     .replace(/[*_#`>]/g, "")
@@ -193,7 +232,7 @@ export function limitWords(text, maxWords) {
 
 // ---------- panel turn ----------
 
-export function checkTurn(out, session, { coding = false } = {}) {
+export function checkTurn(out, session, { coding = false, pasteFollowUp = false } = {}) {
   const checks = [];
   const answeredCount = session.turns.filter((t) => t.answer).length;
 
@@ -236,7 +275,18 @@ export function checkTurn(out, session, { coding = false } = {}) {
     out.decision.asker = "tech";
     checks.push("Coding round goes to Theo, so the engine handed him the question.");
   }
-  if (!coding) {
+  // Pasted code gets a follow-up from the person who ran the round, even if he asked last time.
+  if (pasteFollowUp && !coding) {
+    if (out.decision.asker !== "tech") {
+      checks.push(
+        `Code was pasted in the coding round; the floor goes from ${AGENTS[out.decision.asker].name} to Theo to ask about it.`,
+      );
+      out.decision.asker = "tech";
+    } else {
+      checks.push("Code was pasted in the coding round; Theo follows up on it.");
+    }
+  }
+  if (!coding && !pasteFollowUp) {
     const lastTwo = session.turns.slice(-2).map((t) => t.asker);
     const repeats = lastTwo.length === 2 && lastTwo.every((a) => a === out.decision.asker);
     if (repeats) {
@@ -364,6 +414,106 @@ export function checkProblem(problem) {
   return { problem: valid ? { ...rest, tests: kept } : null, checks, valid };
 }
 
+// ---------- coding integrity ----------
+
+// One paste longer than this is more than a variable name or a line from the problem statement.
+// The browser shows its "paste noticed" note at the same size (LARGE_PASTE_CHARS in src/coding.js).
+export const LARGE_PASTE_CHARS = 80;
+
+const MAX_SAMPLE_CHARS = 120;
+
+function count(value) {
+  return Math.max(0, Math.round(Number(value) || 0));
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+export function formatDuration(seconds) {
+  const s = count(seconds);
+  if (s < 60) {
+    return `${s}s`;
+  }
+  const rest = String(s % 60).padStart(2, "0");
+  return `${Math.floor(s / 60)}m ${rest}s`;
+}
+
+// Turn the editor's raw counters into one line the panel reads next to the code. The browser
+// sends the numbers, so everything is clamped and recomputed here rather than trusted as text.
+export function summarizeIntegrity(raw) {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const typed = count(raw.typed_chars);
+  const pasted = count(raw.pasted_chars);
+  const pastes = count(raw.pastes);
+  const largest = Math.min(count(raw.largest_paste), pasted);
+  const runs = count(raw.test_runs);
+  const seconds = count(raw.seconds_open);
+  const sample = String(raw.largest_paste_sample || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SAMPLE_CHARS);
+
+  const total = typed + pasted;
+  const share = total === 0 ? 0 : Math.round((pasted / total) * 100);
+  const flagged = largest > LARGE_PASTE_CHARS;
+
+  let line = `Typed ${plural(typed, "char")}, pasted ${plural(pasted, "char")} in ${plural(pastes, "paste")}`;
+  if (pastes > 0) {
+    line += ` (largest ${largest} at once)`;
+  }
+  line += `, ${plural(runs, "test run")} before submitting, ${formatDuration(seconds)} from open to submit.`;
+
+  if (flagged) {
+    line += ` Large paste noticed: ${share}% of the input arrived by paste.`;
+    if (sample) {
+      line += ` The largest paste began: "${sample}"`;
+    }
+  }
+
+  return { line, flagged, typed, pasted, pastes, largest, runs, seconds, share };
+}
+
+// What the panel is told before the question after a coding round with a big paste.
+export function pasteFollowUpHint(integrity) {
+  if (!integrity || !integrity.flagged) {
+    return "";
+  }
+  return `The candidate pasted ${integrity.largest} characters at once in the coding round (${integrity.share}% of their input). Theo (tech) takes the next question and asks them to walk him through the part they pasted, line by line, and why it works. Theo's whisper mentions the paste.`;
+}
+
+const MAX_CHAT_SENTENCES = 2;
+const MAX_CHAT_WORDS = 45;
+const CHAT_FALLBACK = "I'd rather hear your idea first. What's your plan?";
+
+// Theo's chat replies are spoken, and he must never hand over code. Fenced code is cut out,
+// and the reply is kept to two short sentences.
+export function checkChatReply(reply) {
+  const checks = [];
+  let text = String(reply || "");
+
+  if (/```/.test(text)) {
+    text = text.replace(/```[\s\S]*?(```|$)/g, " ");
+    checks.push("Theo's reply had a code block; the engine removed it.");
+  }
+  text = stripMarkdown(text);
+
+  const sentences = splitSentences(text);
+  if (sentences.length > MAX_CHAT_SENTENCES) {
+    text = sentences.slice(0, MAX_CHAT_SENTENCES).join(" ");
+    checks.push(`Theo's reply was over ${MAX_CHAT_SENTENCES} sentences; trimmed.`);
+  }
+  text = limitSentences(text, MAX_CHAT_WORDS);
+
+  if (!text.trim()) {
+    text = CHAT_FALLBACK;
+  }
+  return { reply: text, checks };
+}
+
 // ---------- verdict ----------
 
 // Cut spoken text to a word limit on a sentence boundary, so the voice never stops mid thought.
@@ -428,7 +578,7 @@ export function checkVerdict(v, answered) {
       return quote;
     }
     quotesFixed += 1;
-    const real = closestSentence(quote, answers);
+    const real = alignedQuote(quote, answers);
     checks.push(`${who} quoted words you never said; replaced with your closest real line.`);
     return real;
   };
@@ -469,4 +619,133 @@ export function checkVerdict(v, answered) {
   }
 
   return { verdict: v, checks };
+}
+
+// ---------- attention ----------
+//
+// The browser tracks whether the candidate looks at the screen (src/gaze.js) and sends only
+// numbers with each answer. Like the integrity counters, they are clamped here, never trusted.
+
+const MAX_ATTENTION_EVENTS = 10;
+const ATTENTION_EVENT_TYPES = ["absent", "looking_away"];
+
+export function sanitizeAttention(raw) {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const lookingPct = Math.min(100, count(raw.lookingPct));
+  const trackedSeconds = count(raw.trackedSeconds);
+  const events = Array.isArray(raw.awayEvents) ? raw.awayEvents : [];
+
+  const awayEvents = events
+    .filter((e) => e && ATTENTION_EVENT_TYPES.includes(e.type))
+    .slice(0, MAX_ATTENTION_EVENTS)
+    .map((e) => ({
+      type: e.type,
+      seconds: Math.min(3600, count(e.seconds)),
+      during: e.during === "coding" ? "coding" : "answer",
+    }));
+
+  return { lookingPct, trackedSeconds, awayEvents };
+}
+
+// One short line for the transcript, e.g. "[ATTENTION] looked at screen 82% of the answer; away 7s once".
+export function attentionLine(raw) {
+  // Turns can come back from the browser's copy of the session, so clean them again.
+  const attention = sanitizeAttention(raw);
+  if (!attention) {
+    return "";
+  }
+
+  const during = attention.awayEvents.some((e) => e.during === "coding") ? "the coding round" : "the answer";
+  let line = `[ATTENTION] looked at screen ${attention.lookingPct}% of ${during}`;
+
+  const absent = attention.awayEvents.filter((e) => e.type === "absent");
+  const away = attention.awayEvents.filter((e) => e.type === "looking_away");
+  const describe = (list, label) => {
+    const total = list.reduce((sum, e) => sum + e.seconds, 0);
+    const times = list.length === 1 ? "once" : `${list.length} times`;
+    return `${label} ${formatDuration(total)} ${times}`;
+  };
+
+  if (absent.length > 0) {
+    line += `; ${describe(absent, "left the camera for")}`;
+  }
+  if (away.length > 0) {
+    line += `; ${describe(away, "looked away")}`;
+  }
+  if (absent.length === 0 && away.length === 0) {
+    line += "; no long absences";
+  }
+
+  return line;
+}
+
+// Totals across the whole interview for the verdict, or null when no answer was tracked.
+export function summarizeAttention(turns) {
+  const tracked = (turns || []).map((t) => sanitizeAttention(t && t.attention)).filter(Boolean);
+  if (tracked.length === 0) {
+    return null;
+  }
+
+  // Weight each answer by how long it was tracked so a 3 minute coding round counts more than a quick reply.
+  const seconds = tracked.reduce((sum, a) => sum + a.trackedSeconds, 0);
+  let lookingPct = 0;
+  if (seconds > 0) {
+    lookingPct = Math.round(tracked.reduce((sum, a) => sum + a.lookingPct * a.trackedSeconds, 0) / seconds);
+  } else {
+    lookingPct = Math.round(tracked.reduce((sum, a) => sum + a.lookingPct, 0) / tracked.length);
+  }
+
+  const events = tracked.flatMap((a) => a.awayEvents);
+  const longest = events.reduce((max, e) => Math.max(max, e.seconds), 0);
+
+  let line = `Looked at the screen ${lookingPct}% of the time across ${plural(tracked.length, "answer")}.`;
+  if (events.length === 0) {
+    line += " No long absences.";
+  } else {
+    line += ` Away more than 5s ${events.length === 1 ? "once" : `${events.length} times`} (longest ${formatDuration(longest)}).`;
+  }
+
+  return {
+    answers: tracked.length,
+    lookingPct,
+    awayEvents: events.length,
+    absentEvents: events.filter((e) => e.type === "absent").length,
+    longestAway: longest,
+    line,
+  };
+}
+
+// ---------- trained critic ----------
+
+// The critic and the panel disagree enough to flag the turn at this many points apart.
+export const CRITIC_FLAG_GAP = 2;
+
+// A second opinion from the trained critic (engine/critic.js). It never changes the panel's
+// score: the panel heard the whole conversation, the critic only sees one answer. A big gap
+// just gets a note in the ledger. judge is swappable so tests don't depend on the model file.
+export function checkWithCritic(assessment, answer, judge = critique) {
+  const checks = [];
+  if (!assessment || !answer) {
+    return { critic: null, checks };
+  }
+
+  let result = null;
+  try {
+    result = judge(answer);
+  } catch {
+    // A broken model file must never break a turn.
+    result = null;
+  }
+  if (!result) {
+    return { critic: null, checks };
+  }
+
+  const critic = { score: result.score, tags: result.tags.slice(0, 3) };
+  if (Math.abs(critic.score - assessment.score) >= CRITIC_FLAG_GAP) {
+    checks.push(`Trained critic scored this ${critic.score}/5, panel gave ${assessment.score}/5. Flagged for review.`);
+  }
+  return { critic, checks };
 }

@@ -38,3 +38,17 @@ if [ ! -s data/profile.json.tmp ]; then
 fi
 mv -f data/profile.json.tmp data/profile.json
 echo "profile written: $ROOT/data/profile.json"
+
+# Learning loop: retrain the answer critic on the seed answers plus every logged turn.
+# Optional by design. Without Python and scikit-learn it is skipped quietly, and a failed
+# retrain leaves the old engine/critic-model.json in place, so the pipeline never breaks.
+CRITIC_PY="${CRITIC_PYTHON:-}"
+if [ -z "$CRITIC_PY" ] && [ -x "$ROOT/.venv/bin/python" ]; then
+  CRITIC_PY="$ROOT/.venv/bin/python"
+fi
+if [ -z "$CRITIC_PY" ]; then
+  CRITIC_PY="$(command -v python3 || true)"
+fi
+if [ -n "$CRITIC_PY" ] && "$CRITIC_PY" -c "import sklearn" >/dev/null 2>&1; then
+  "$CRITIC_PY" "$ROOT/train/critic.py" --quick || echo "critic retrain failed; kept the previous model" >&2
+fi

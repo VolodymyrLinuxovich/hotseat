@@ -5,8 +5,11 @@ import path from "node:path";
 import express from "express";
 
 import { HOSTED, MAX_QUESTIONS, ROOT } from "./engine/config.js";
+import { codingChat } from "./engine/coding.js";
 import { candidateId, readProfile, runBruin } from "./engine/memory.js";
 import { answerQuestion, closeInterview, newSession, openInterview } from "./engine/panel.js";
+import { MAX_AUDIO_BYTES, sttAvailable, transcribe } from "./engine/stt.js";
+import { synthesize, VOICES } from "./engine/tts.js";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -78,8 +81,32 @@ app.post("/api/answer", async (req, res) => {
   }
 
   try {
-    const turn = await answerQuestion(session, req.body.answer);
+    const turn = await answerQuestion(session, req.body.answer, req.body.coding, req.body.attention);
     res.json({ ...turn, state: session });
+  } catch (err) {
+    fail(res, err);
+  }
+});
+
+// The candidate talks to Theo while coding: clarifying questions, their approach, asking for a hint.
+app.post("/api/coding-chat", async (req, res) => {
+  const session = getSession(req.body);
+  if (!session) {
+    res.status(404).json({ error: "no session" });
+    return;
+  }
+  if (typeof req.body.message !== "string" || !req.body.message.trim()) {
+    res.status(400).json({ error: "message is required" });
+    return;
+  }
+
+  try {
+    const out = await codingChat(session, req.body);
+    if (!out) {
+      res.status(409).json({ error: "no coding round is open" });
+      return;
+    }
+    res.json({ ...out, state: session });
   } catch (err) {
     fail(res, err);
   }
@@ -97,6 +124,46 @@ app.post("/api/verdict", async (req, res) => {
     res.json({ ...verdict, hosted: HOSTED });
   } catch (err) {
     fail(res, err);
+  }
+});
+
+// Spoken lines for the panel. A 503 tells the browser to fall back to its own voices.
+app.post("/api/tts", async (req, res) => {
+  const { agent, text } = req.body || {};
+  if (!VOICES[agent] || typeof text !== "string" || !text.trim()) {
+    res.status(400).json({ error: "agent and text are required" });
+    return;
+  }
+
+  try {
+    const { audio, type } = await synthesize(agent, text);
+    res.set("Content-Type", type);
+    res.set("Cache-Control", "private, max-age=3600");
+    res.send(audio);
+  } catch (err) {
+    console.error("tts failed:", err.message || err);
+    res.status(503).json({ error: "tts unavailable" });
+  }
+});
+
+// The candidate's recorded answer, sent as the raw audio body (audio/webm from Chrome).
+// A 503 tells the browser to keep its own live transcript instead.
+app.post("/api/stt", express.raw({ type: "audio/*", limit: MAX_AUDIO_BYTES }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    res.status(400).json({ error: "send the recording as an audio/* body" });
+    return;
+  }
+  if (!sttAvailable()) {
+    res.status(503).json({ error: "stt unavailable" });
+    return;
+  }
+
+  try {
+    const text = await transcribe(req.body, req.headers["content-type"]);
+    res.json({ text });
+  } catch (err) {
+    console.error("stt failed:", err.message || err);
+    res.status(503).json({ error: "stt unavailable" });
   }
 });
 

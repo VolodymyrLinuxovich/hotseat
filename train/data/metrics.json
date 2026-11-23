@@ -1,0 +1,74 @@
+{
+  "holdout": {
+    "n": 64,
+    "score_mae": 0.516,
+    "within_1": 0.922,
+    "exact": 0.562,
+    "tag_f1": {
+      "no_numbers": {
+        "f1": 0.222,
+        "support": 6
+      },
+      "vague": {
+        "f1": 0.703,
+        "support": 15
+      },
+      "we_not_i": {
+        "f1": 0.909,
+        "support": 5
+      },
+      "deflects": {
+        "f1": 0.5,
+        "support": 5
+      },
+      "rambling": {
+        "f1": 0.0,
+        "support": 1
+      },
+      "strong_example": {
+        "f1": 0.842,
+        "support": 19
+      },
+      "clear_tradeoffs": {
+        "f1": 0.571,
+        "support": 8
+      },
+      "incomplete_code": {
+        "f1": 0.667,
+        "support": 5
+      }
+    }
+  },
+  "real_sessions": {
+    "n": 20,
+    "score_mae": 1.1,
+    "within_1": 0.75,
+    "exact": 0.15,
+    "tag_f1": {
+      "no_numbers": {
+        "f1": 0.667,
+        "support": 6
+      },
+      "vague": {
+        "f1": 0.522,
+        "support": 8
+      },
+      "we_not_i": {
+        "f1": 1.0,
+        "support": 1
+      },
+      "deflects": {
+        "f1": 0.286,
+        "support": 4
+      },
+      "strong_example": {
+        "f1": 1.0,
+        "support": 1
+      },
+      "incomplete_code": {
+        "f1": 1.0,
+        "support": 2
+      }
+    }
+  }
+}

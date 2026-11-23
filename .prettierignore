@@ -7,3 +7,5 @@ logs
 *.md
 package-lock.json
 bruin
+engine/critic-model.json
+train/data

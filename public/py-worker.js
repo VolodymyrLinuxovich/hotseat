@@ -6,6 +6,8 @@ const ready = loadPyodide();
 ready.then(() => postMessage({ ready: true }));
 
 const HARNESS = `
+import contextlib
+import io
 import json
 
 def _hotseat_run(src, fn_name, tests_json):
@@ -21,15 +23,24 @@ def _hotseat_run(src, fn_name, tests_json):
     for t in json.loads(tests_json):
         args = json.loads(t["args_json"])
         expected = json.loads(t["expected_json"])
+        # Capture print() so the page can tell "printed the answer" apart from "returned it".
+        out = io.StringIO()
         try:
-            got = f(*args)
+            with contextlib.redirect_stdout(out):
+                got = f(*args)
             # Round-trip through JSON so tuples compare equal to lists.
             got_json = json.dumps(got)
             passed = json.loads(got_json) == expected
         except Exception as ex:
             got_json = f"error: {type(ex).__name__}: {ex}"
             passed = False
-        results.append({"args": t["args_json"], "expected": t["expected_json"], "got": got_json, "pass": passed})
+        results.append({
+            "args": t["args_json"],
+            "expected": t["expected_json"],
+            "got": got_json,
+            "pass": passed,
+            "printed": out.getvalue()[:200],
+        })
     return json.dumps({"results": results})
 `;
 

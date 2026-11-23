@@ -314,11 +314,20 @@ button:disabled {
 .answer textarea {
   margin: 0;
 }
+/* --level (0 to 1) is set from the mic input, so the ring grows while the candidate talks */
 #micBtn.rec {
   background: #d9634a;
   border-color: #d9634a;
   color: #fff;
+  box-shadow: 0 0 0 calc(var(--level, 0) * 10px) rgba(217, 99, 74, 0.35);
+  transition: box-shadow 0.08s linear;
+}
+#micBtn.transcribing {
   animation: pulse 1.2s infinite;
+}
+/* the browser's live guess is only a preview until the server transcript replaces it */
+#answerBox.previewing {
+  color: #8a7e70;
 }
 @keyframes pulse {
   50% {
@@ -364,52 +373,200 @@ button:disabled {
 #verdict h1 {
   font-size: 40px;
 }
+/* score card over the frozen exit still: pinned right so the still stays visible */
+#verdict {
+  left: auto;
+  right: 24px;
+  top: 24px;
+  transform: none;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 26px;
+  z-index: 10;
+  animation: card-in 0.6s ease both;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.vhead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.vhead .tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a7e70;
+}
+.ring {
+  flex: none;
+}
+.ring circle {
+  fill: none;
+  stroke-width: 7;
+}
+.ring .track {
+  stroke: #2e2722;
+}
+.ring .fill {
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 42px 42px;
+}
+.ring text {
+  fill: #f3ece2;
+  font-family: Fraunces, serif;
+  font-size: 20px;
+  font-weight: 700;
+}
 .vbig {
   font-family: Fraunces, serif;
-  font-size: 30px;
-  margin: 6px 0 14px;
+  font-size: 34px;
+  line-height: 1.1;
+  margin: 2px 0;
 }
-.votes {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 16px 0;
-}
-.vote {
-  background: #1d1916;
-  border-radius: 12px;
-  padding: 12px;
+.vscore {
   font-size: 13px;
-  line-height: 1.4;
-  border: 1px solid #3a322b;
-}
-.vote .v {
-  font-weight: 700;
-  margin: 4px 0;
-}
-.vote q {
-  display: block;
-  margin-top: 6px;
   color: #a89c8d;
-  font-style: italic;
 }
-.vsec {
-  margin-top: 16px;
+.vsummary {
+  margin: 16px 0;
+  color: #cfc4b6;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
-.vsec h3 {
-  font-size: 12px;
-  color: #8a7e70;
-  margin-bottom: 6px;
+.vcards {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.vcard {
+  background: #1d1916;
+  border: 1px solid #3a322b;
+  border-left: 3px solid var(--who);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.vcardhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.vcard p {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #cfc4b6;
+}
+.vcard .pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 99px;
+}
+.vcard .pill.yes {
+  background: rgba(124, 196, 127, 0.16);
+  color: #9ad49c;
+}
+.vcard .pill.no {
+  background: rgba(217, 99, 74, 0.16);
+  color: #ec8c76;
+}
+.vfold {
+  border-top: 1px solid #2e2722;
+}
+.vfold summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 2px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
   font-weight: 600;
 }
-.vsec li {
-  margin: 6px 0 6px 18px;
+.vfold summary::-webkit-details-marker {
+  display: none;
 }
-.vsec q {
+/* a small chevron that turns when the section opens */
+.vfold summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #a89c8d;
+  border-bottom: 2px solid #a89c8d;
+  transform: rotate(-45deg);
+  transition: transform 0.2s;
+}
+.vfold[open] summary::before {
+  transform: rotate(45deg);
+}
+.vfold .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #8a7e70;
+  background: #241f1b;
+  padding: 1px 8px;
+  border-radius: 99px;
+}
+.vfoldbody {
+  padding: 0 2px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cfc4b6;
+}
+.vfoldbody ul {
+  padding-left: 18px;
+}
+.vfoldbody li {
+  margin: 6px 0;
+}
+.vfoldbody q {
+  display: block;
+  margin-top: 3px;
   color: #a89c8d;
   font-style: italic;
+}
+.vfoldbody .drill {
+  margin-top: 3px;
+  color: #e8c48a;
+}
+.vfoldbody .bruinbox {
+  margin-top: 10px;
+}
+.vactions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 12px;
+  color: #8a7e70;
+}
+
+/* the exit still: muted and darkened, with a vignette pulling the eye to the doorway */
+#scene {
+  transition: filter 1.2s ease;
+}
+body.frozen #scene {
+  filter: saturate(0.55) brightness(0.62) contrast(1.05);
+}
+body.frozen::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(ellipse at 40% 50%, transparent 35%, rgba(0, 0, 0, 0.7) 100%);
 }
 .bruinbox {
   margin-top: 18px;
@@ -432,6 +589,12 @@ button:disabled {
   border-radius: 16px;
   border: 1px solid rgba(243, 236, 226, 0.1);
   padding: 18px;
+  display: flex;
+  gap: 16px;
+}
+.idemain {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -485,6 +648,96 @@ button:disabled {
 .idebar .primary {
   margin-left: auto;
 }
+.idenote {
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #3a2a14;
+  color: #f2c98a;
+}
+.idenote.paste {
+  background: #3d1f1a;
+  color: #ffb4a3;
+}
+
+/* the talk-through with Theo, beside the editor */
+#codeChat {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-left: 1px solid rgba(243, 236, 226, 0.08);
+  padding-left: 16px;
+}
+.chathead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+.chathead b {
+  color: #5fa8d3;
+}
+.chathead span {
+  font-size: 12px;
+  color: #a89c8d;
+}
+#chatLog {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.msg {
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #1d1916;
+}
+.msg b {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+.msg.theo b {
+  color: #5fa8d3;
+}
+.msg.me {
+  background: #2a231d;
+  margin-left: 24px;
+}
+.msg.me b {
+  color: #e8a33d;
+}
+.msg.pending span {
+  color: #a89c8d;
+}
+.msg.error span {
+  color: #ffb4a3;
+}
+.chatinput {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.chatinput textarea {
+  margin: 0;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.chatinput button {
+  padding: 8px 10px;
+}
+#chatMic.rec {
+  background: #d9634a;
+  border-color: #d9634a;
+  color: #fff;
+}
+
 #testList {
   display: flex;
   gap: 6px;
@@ -620,4 +873,171 @@ button:disabled {
 .spark .mid {
   stroke: #3a322b;
   stroke-dasharray: 3 3;
+}
+
+/* Collapsible ledger entries */
+.entry summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cfc4b6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.entry summary::-webkit-details-marker {
+  display: none;
+}
+
+.entry summary::before {
+  content: "▸";
+  color: #8a7e70;
+  transition: transform 0.2s;
+}
+
+.entry details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.entry .entrybody {
+  margin-top: 8px;
+}
+
+/* ---------- door intro ---------- */
+#labels .label {
+  transition: opacity 0.6s;
+}
+#labels.intro .label {
+  opacity: 0;
+}
+#skipHint {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: rgba(20, 17, 15, 0.55);
+  color: #cfc4b6;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  animation: hint-in 0.8s ease 0.6s both;
+}
+@keyframes hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- webcam self view ---------- */
+#selfview {
+  position: fixed;
+  left: 16px;
+  /* sits just above the answer dock; scene.js keeps --dock-h in sync with the dock's height */
+  bottom: calc(var(--dock-h, 150px) + 28px);
+  width: 208px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1d1916;
+  border: 1px solid rgba(243, 236, 226, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  z-index: 5;
+  animation: hint-in 0.5s ease both;
+}
+#selfVideo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  /* mirrored, like every video call shows you to yourself */
+  transform: scaleX(-1);
+  transition:
+    height 0.25s ease,
+    opacity 0.25s ease;
+}
+#selfToggle {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 99px;
+  background: rgba(20, 17, 15, 0.7);
+  border-color: rgba(243, 236, 226, 0.15);
+}
+/* hidden by the candidate: collapse to just the button, but keep the video playing for the scene monitor */
+#selfview.off {
+  width: auto;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+#selfview.off #selfVideo {
+  height: 0;
+  opacity: 0;
+}
+#selfview.off #selfToggle {
+  position: static;
+}
+/* the coding round fills the left side, so tuck the self view under the ledger instead */
+#ide:not(.hidden) ~ #selfview {
+  left: auto;
+  right: 16px;
+  bottom: 16px;
+  width: 180px;
+}
+
+/* ---------- attention tracking (gaze.js) ---------- */
+/* deliberately tiny: the candidate should know it's on without being distracted by it */
+#attnDot {
+  position: fixed;
+  left: 236px;
+  bottom: calc(var(--dock-h, 150px) + 28px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #8a7e70;
+  z-index: 5;
+  pointer-events: none;
+}
+#attnDot i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6fae7b;
+}
+#attnDot.off i {
+  background: #6b625a;
+}
+#attnDot.hidden,
+#ide:not(.hidden) ~ #attnDot {
+  display: none;
+}
+
+#attnToast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #cfc4b6;
+  background: rgba(28, 23, 20, 0.86);
+  border: 1px solid rgba(243, 236, 226, 0.1);
+  border-radius: 99px;
+  z-index: 30;
+  animation: hint-in 0.4s ease both;
+}
+
+.ledger-attn {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8a7e70;
 }

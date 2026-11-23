@@ -1,4 +1,9 @@
-import * as THREE from "three";
+import { initScene } from "./scene.js";
+
+import { createCodingRound } from "./coding.js";
+import { beginQuestion, questionSummary, startGaze, stopGaze } from "./gaze.js";
+import { bindMicButton } from "./listen.js";
+import * as voice from "./voice.js";
 
 // ---------- panel definition ----------
 const PANEL = {
@@ -39,487 +44,58 @@ const MOOD_LABEL = {
 };
 
 // ---------- three.js scene ----------
-const canvas = document.getElementById("scene");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x14110f);
-scene.fog = new THREE.Fog(0x14110f, 9, 22);
-
-const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-const camBase = new THREE.Vector3(0, 1.75, 6.2);
-camera.position.copy(camBase);
-const camLook = new THREE.Vector3(0, 1.35, 0);
-const camLookTarget = camLook.clone();
-
-scene.add(new THREE.HemisphereLight(0xffe7c8, 0x1a1410, 0.55));
-const key = new THREE.SpotLight(0xffd9a8, 60, 20, Math.PI / 4, 0.5, 1.4);
-key.position.set(0, 6, 2.5);
-key.target.position.set(0, 0.8, 0);
-key.castShadow = true;
-key.shadow.mapSize.set(2048, 2048);
-scene.add(key, key.target);
-const rim = new THREE.DirectionalLight(0x7fa8ff, 0.6);
-rim.position.set(-4, 3, -5);
-scene.add(rim);
-
-// room
-const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(14, 64),
-  new THREE.MeshStandardMaterial({ color: 0x2a221d, roughness: 0.9 }),
-);
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
-const wall = new THREE.Mesh(
-  new THREE.PlaneGeometry(30, 10),
-  new THREE.MeshStandardMaterial({ color: 0x231c18, roughness: 1 }),
-);
-wall.position.set(0, 5, -4);
-scene.add(wall);
-// window glow on wall
-const win = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 2.4), new THREE.MeshBasicMaterial({ color: 0x3b5a78 }));
-win.position.set(0, 3.4, -3.98);
-scene.add(win);
-for (let i = -2; i <= 2; i++) {
-  const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 2.4), new THREE.MeshBasicMaterial({ color: 0x231c18 }));
-  bar.position.set(i * 1.1, 3.4, -3.97);
-  scene.add(bar);
-}
-
-// table
-const wood = new THREE.MeshStandardMaterial({ color: 0x5a3b26, roughness: 0.55 });
-const table = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.12, 1.5), wood);
-table.position.set(0, 0.95, 0.75);
-table.castShadow = true;
-table.receiveShadow = true;
-scene.add(table);
-const front = new THREE.Mesh(
-  new THREE.BoxGeometry(7.4, 0.9, 0.06),
-  new THREE.MeshStandardMaterial({ color: 0x3f2a1c, roughness: 0.7 }),
-);
-front.position.set(0, 0.5, 1.48);
-front.castShadow = true;
-scene.add(front);
-
-// candidate's chair hint (foreground)
-const plant = new THREE.Mesh(
-  new THREE.ConeGeometry(0.45, 1.6, 7),
-  new THREE.MeshStandardMaterial({ color: 0x2f5b3a, flatShading: true }),
-);
-plant.position.set(-4.6, 0.8, -1.5);
-scene.add(plant);
-
-// ---------- avatars ----------
-const avatars = {};
-function makeAvatar(id) {
-  const p = PANEL[id];
-  const g = new THREE.Group();
-  g.position.set(p.x, 0, -0.1);
-  const skin = new THREE.MeshStandardMaterial({ color: 0xe0b896, roughness: 0.6 });
-  const cloth = new THREE.MeshStandardMaterial({
-    color: p.color,
-    roughness: 0.5,
-    emissive: p.color,
-    emissiveIntensity: 0,
-  });
-
-  // chair
-  const chair = new THREE.Mesh(
-    new THREE.BoxGeometry(0.9, 1.5, 0.12),
-    new THREE.MeshStandardMaterial({ color: 0x1c1714 }),
-  );
-  chair.position.set(0, 1.25, -0.45);
-  chair.castShadow = true;
-  g.add(chair);
-
-  const body = new THREE.Group();
-  g.add(body);
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 0.6, 6, 16), cloth);
-  torso.position.y = 1.45;
-  torso.castShadow = true;
-  body.add(torso);
-
-  // arms resting on table
-  const hands = [];
-  for (const s of [-1, 1]) {
-    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), cloth);
-    arm.position.set(s * 0.42, 1.2, 0.25);
-    arm.rotation.x = Math.PI / 2.4;
-    arm.castShadow = true;
-    body.add(arm);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), skin);
-    hand.position.set(s * 0.38, 1.06, 0.58);
-    body.add(hand);
-    hands.push({ mesh: hand, rest: hand.position.clone(), side: s });
-  }
-
-  const head = new THREE.Group();
-  head.position.y = 2.22;
-  body.add(head);
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), skin);
-  skull.castShadow = true;
-  head.add(skull);
-  const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a1412 });
-  const eyes = [];
-  for (const s of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 12), eyeMat);
-    eye.position.set(s * 0.1, 0.04, 0.27);
-    head.add(eye);
-    eyes.push(eye);
-  }
-  const brows = [];
-  for (const s of [-1, 1]) {
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.018, 0.02), eyeMat);
-    brow.position.set(s * 0.1, 0.12, 0.27);
-    head.add(brow);
-    brows.push(brow);
-  }
-  const mouth = new THREE.Mesh(
-    new THREE.BoxGeometry(0.11, 0.025, 0.02),
-    new THREE.MeshStandardMaterial({ color: 0x6b2c26 }),
-  );
-  mouth.position.set(0, -0.1, 0.28);
-  head.add(mouth);
-
-  // identity props
-  const hairMat = new THREE.MeshStandardMaterial({
-    color: id === "manager" ? 0x3a2416 : id === "tech" ? 0x1f1a17 : 0x8c8c8c,
-    roughness: 0.8,
-  });
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.31, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.1), hairMat);
-  hair.position.y = 0.03;
-  hair.rotation.x = -0.25;
-  head.add(hair);
-  if (id === "manager") {
-    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 16), hairMat);
-    bun.position.set(0, 0.22, -0.2);
-    head.add(bun);
-  }
-  if (id === "tech") {
-    const frame = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.4 });
-    for (const s of [-1, 1]) {
-      const lens = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.012, 8, 24), frame);
-      lens.position.set(s * 0.1, 0.04, 0.29);
-      head.add(lens);
-    }
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.012), frame);
-    bridge.position.set(0, 0.05, 0.3);
-    head.add(bridge);
-    const laptop = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 0.38, 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.6, roughness: 0.3 }),
-    );
-    laptop.position.set(0, 1.2, 0.55);
-    laptop.rotation.x = -0.3;
-    g.add(laptop);
-  }
-  if (id === "skeptic") {
-    brows[0].rotation.z = -0.3;
-    const pad = new THREE.Mesh(
-      new THREE.BoxGeometry(0.45, 0.02, 0.6),
-      new THREE.MeshStandardMaterial({ color: 0xf1e9d8 }),
-    );
-    pad.position.set(0.15, 1.02, 0.65);
-    pad.rotation.y = -0.2;
-    g.add(pad);
-  }
-
-  // speaking ring on table
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.55, 0.025, 8, 48),
-    new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0 }),
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(0, 1.02, 0.55);
-  g.add(ring);
-
-  scene.add(g);
-
-  const label = document.createElement("div");
-  label.className = "label";
-  label.innerHTML = `<div class="n" style="color:#${p.color.toString(16)}">${p.name}</div><div class="r">${p.role}</div><div class="m">listening</div><div class="bidmeter"><i style="background:#${p.color.toString(16)}"></i><span></span></div>`;
-  document.getElementById("labels").appendChild(label);
-
-  return {
-    id,
-    g,
-    body,
-    head,
-    mouth,
-    brows,
-    eyes,
-    hands,
-    cloth,
-    ring,
-    label,
-    speaking: false,
-    mood: "neutral",
-    look: new THREE.Vector3(0, 1.8, 6),
-    nod: 0,
-    bubbleUntil: 0,
-    // stagger blinks so the three never blink in sync
-    nextBlink: 1 + Math.random() * 3,
-    blink: 0,
-  };
-}
-for (const id of Object.keys(PANEL)) {
-  avatars[id] = makeAvatar(id);
-}
-
-function setMood(id, mood) {
-  const a = avatars[id];
-  a.mood = mood;
-  a.label.querySelector(".m").textContent = MOOD_LABEL[mood] || mood;
-  if (mood === "impressed") {
-    a.nod = 1;
-  }
-}
-function lookAt(id, target) {
-  if (target === "candidate") {
-    avatars[id].look.set(0, 1.8, 6);
-  } else {
-    const t = avatars[target];
-    avatars[id].look.set(t.g.position.x, 2.2, t.g.position.z);
-  }
-}
-function allLookAt(target) {
-  for (const id of Object.keys(avatars)) {
-    if (id !== target) {
-      lookAt(id, target);
-    } else {
-      lookAt(id, "candidate");
-    }
-  }
-}
-
+// The room, avatars, door walk-in and webcam live in scene.js.
+// conferring and whisperer stay here because the interview flow flips them; the scene reads them every frame.
 let conferring = false;
 // who is whispering right now, so the others can turn toward them
 let whisperer = null;
-const clock = new THREE.Clock();
-const tmpV = new THREE.Vector3();
-
-function resize() {
-  const w = innerWidth;
-  const h = innerHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-addEventListener("resize", resize);
-resize();
-
-function animate() {
-  // getDelta must run first: getElapsedTime also resets the delta clock
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const t = clock.elapsedTime;
-  for (const a of Object.values(avatars)) {
-    // breathing
-    a.body.position.y = Math.sin(t * 1.6 + a.g.position.x) * 0.012;
-    // conferring: heads turn to each other and lean in
-    if (conferring) {
-      const others = Object.keys(avatars).filter((k) => k !== a.id);
-
-      if (whisperer && whisperer !== a.id) {
-        lookAt(a.id, whisperer);
-      } else {
-        // the whisperer (or everyone, between whispers) glances from one colleague to the other
-        const pick = others[Math.floor(((t * 0.7 + a.g.position.x) % 2) + 2) % 2];
-        lookAt(a.id, pick);
-      }
-    }
-    // head look
-    const local = a.head.worldToLocal(tmpV.copy(a.look));
-    const yaw = Math.atan2(local.x, local.z);
-    a.head.rotation.y += (THREE.MathUtils.clamp(yaw, -0.9, 0.9) - a.head.rotation.y) * 0.08;
-    // mood poses
-    const tilt = a.mood === "skeptical" ? 0.18 : a.mood === "amused" ? -0.1 : 0;
-    a.head.rotation.z += (tilt - a.head.rotation.z) * 0.05;
-    const lean = a.mood === "concerned" ? -0.12 : conferring ? 0.12 : a.speaking ? 0.06 : 0;
-    a.body.rotation.x += (lean - a.body.rotation.x) * 0.05;
-    if (a.nod > 0) {
-      a.head.rotation.x = Math.sin((1 - a.nod) * Math.PI * 4) * 0.15;
-      a.nod = Math.max(0, a.nod - dt * 0.8);
-    } else {
-      a.head.rotation.x *= 0.9;
-    }
-    // blinks: a quick close and open every few seconds
-    if (t > a.nextBlink) {
-      a.blink = 1;
-      a.nextBlink = t + 2.5 + Math.random() * 3.5;
-    }
-    const lid = a.blink > 0 ? Math.abs(Math.cos(a.blink * Math.PI)) : 1;
-    for (const eye of a.eyes) {
-      eye.scale.y = Math.max(0.1, lid);
-    }
-    a.blink = Math.max(0, a.blink - dt * 7);
-
-    // hand gestures while talking, one hand at a time like a person explaining
-    for (const h of a.hands) {
-      let lift = 0;
-      let reach = 0;
-      if (a.speaking) {
-        const phase = t * 2.2 + a.g.position.x + (h.side > 0 ? 0 : Math.PI);
-        lift = Math.max(0, Math.sin(phase)) * 0.11;
-        reach = Math.max(0, Math.sin(phase)) * 0.08;
-      }
-      const target = h.rest.y + lift;
-      h.mesh.position.y += (target - h.mesh.position.y) * 0.12;
-      h.mesh.position.z += (h.rest.z + reach - h.mesh.position.z) * 0.12;
-      h.mesh.position.x += (h.rest.x - h.side * reach * 0.6 - h.mesh.position.x) * 0.12;
-    }
-
-    // speaking
-    const talk = a.speaking ? 0.5 + Math.abs(Math.sin(t * 13 + a.g.position.x)) * 3.2 : 1;
-    a.mouth.scale.y += (talk - a.mouth.scale.y) * 0.4;
-    a.cloth.emissiveIntensity += ((a.speaking ? 0.35 : 0) - a.cloth.emissiveIntensity) * 0.1;
-    a.ring.material.opacity += ((a.speaking ? 0.9 : 0) - a.ring.material.opacity) * 0.1;
-    a.ring.scale.setScalar(1 + (a.speaking ? Math.sin(t * 4) * 0.05 : 0));
-    // label
-    tmpV.set(a.g.position.x, 2.75, a.g.position.z).project(camera);
-    a.label.style.left = `${(tmpV.x * 0.5 + 0.5) * innerWidth}px`;
-    a.label.style.top = `${(-tmpV.y * 0.5 + 0.5) * innerHeight}px`;
-  }
-  // camera drifts toward speaker
-  camera.position.x += (camBase.x + Math.sin(t * 0.25) * 0.15 - camera.position.x) * 0.02;
-  camLook.lerp(camLookTarget, 0.04);
-  camera.lookAt(camLook);
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
-}
-animate();
-
-function focusOn(id) {
-  if (!id) {
-    camLookTarget.set(0, 1.35, 0);
-    camBase.x = 0;
-    return;
-  }
-  camLookTarget.set(avatars[id].g.position.x * 0.55, 1.55, 0);
-  camBase.x = avatars[id].g.position.x * 0.25;
-}
+const sceneHooks = {
+  isConferring: () => conferring,
+  whisperer: () => whisperer,
+};
+const { avatars, setMood, lookAt, allLookAt, focusOn, playIntro, playExit, startWebcam } = initScene(
+  PANEL,
+  MOOD_LABEL,
+  sceneHooks,
+);
 
 // ---------- voice ----------
-let voices = [];
-function loadVoices() {
-  voices = speechSynthesis.getVoices();
-}
-loadVoices();
-speechSynthesis.onvoiceschanged = loadVoices;
-const usedVoices = new Set();
-const voiceFor = {};
-function pickVoice(id) {
-  if (voiceFor[id]) {
-    return voiceFor[id];
-  }
-  const en = voices.filter((v) => v.lang.startsWith("en"));
-  let v = null;
-  for (const name of PANEL[id].voice) {
-    v = en.find((x) => x.name.includes(name) && !usedVoices.has(x.name));
-    if (v) {
-      break;
-    }
-  }
-  if (!v) {
-    v = en.find((x) => !usedVoices.has(x.name)) || en[0] || null;
-  }
-  if (v) {
-    usedVoices.add(v.name);
-    voiceFor[id] = v;
-  }
-  return v;
-}
+// voice.js owns the audio and plays one line at a time; this wrapper drives the avatars.
+voice.configureVoices(PANEL);
 
 function speak(id, text) {
-  return new Promise((resolve) => {
-    const a = avatars[id];
-    showCaption(id, text);
-    focusOn(id);
-    allLookAt(id);
-    a.speaking = true;
-    const u = new SpeechSynthesisUtterance(text);
-    const v = pickVoice(id);
-    if (v) {
-      u.voice = v;
-    }
-    u.pitch = PANEL[id].pitch;
-    u.rate = PANEL[id].rate;
-    let finished = false;
-    const done = () => {
-      if (finished) {
-        return;
-      }
-      finished = true;
+  const a = avatars[id];
+  return voice.speak(id, text, {
+    // runs when this line actually starts, not when it was queued, so captions match the audio
+    onStart: () => {
+      showCaption(id, text);
+      focusOn(id);
+      allLookAt(id);
+      a.speaking = true;
+    },
+    onEnd: () => {
       a.speaking = false;
       for (const k of Object.keys(avatars)) {
         lookAt(k, "candidate");
       }
       focusOn(null);
-      resolve();
-    };
-    u.onend = done;
-    u.onerror = done;
-    // safety: ~70ms per char
-    setTimeout(done, Math.max(2500, text.length * 75));
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+    },
   });
 }
 
-// ---------- speech recognition ----------
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null;
-let recording = false;
-let baseText = "";
+// ---------- speech input ----------
+// listen.js records the answer and has the server transcribe it; the browser recognizer only
+// fills in a grey preview while the candidate talks. Speak also cuts the panel off.
 const micBtn = document.getElementById("micBtn");
 const answerBox = document.getElementById("answerBox");
-if (!SR) {
-  micBtn.disabled = true;
-  micBtn.title = "Speech recognition needs Chrome";
-}
-function startRec() {
-  if (!SR || recording) {
-    return;
+const { stopRec } = bindMicButton(micBtn, answerBox);
+
+// typing is a barge-in too: once the candidate starts answering, the panel goes quiet
+answerBox.addEventListener("input", () => {
+  if (voice.isSpeaking()) {
+    voice.stopSpeaking();
   }
-  rec = new SR();
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.lang = "en-US";
-  baseText = answerBox.value ? answerBox.value + " " : "";
-  rec.onresult = (e) => {
-    let finalT = "";
-    let interim = "";
-    for (let i = 0; i < e.results.length; i++) {
-      if (e.results[i].isFinal) {
-        finalT += e.results[i][0].transcript;
-      } else {
-        interim += e.results[i][0].transcript;
-      }
-    }
-    answerBox.value = baseText + finalT + interim;
-  };
-  rec.onend = () => {
-    recording = false;
-    micBtn.classList.remove("rec");
-    micBtn.textContent = "🎙 Speak";
-  };
-  rec.start();
-  recording = true;
-  micBtn.classList.add("rec");
-  micBtn.textContent = "■ Stop";
-}
-function stopRec() {
-  if (rec && recording) {
-    // drop late results so an old transcript can't refill a cleared answer box
-    rec.onresult = null;
-    rec.stop();
-  }
-}
-micBtn.onclick = () => (recording ? stopRec() : startRec());
+});
 
 // ---------- UI helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -551,6 +127,19 @@ function addLedger(out, qIndex) {
     html += `<div class="tag">ANSWER ${qIndex - 1} · ${esc(a.topic)}</div>
       <div class="line"><span class="score s${a.score}">${a.score}/5</span><span>${esc(a.note)}</span></div>
       <div class="line" style="flex-wrap:wrap;gap:4px">${a.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>`;
+    if (out.attention) {
+      html += `<div class="ledger-attn">Attention: ${out.attention.lookingPct}% on screen</div>`;
+    }
+    // The trained critic's second opinion, shown quietly next to the panel's score.
+    if (out.critic) {
+      const tags = out.critic.tags.length ? ` · ${out.critic.tags.map(esc).join(", ")}` : "";
+      html += `<div class="ledger-attn">Critic: ${out.critic.score}/5${tags}</div>`;
+    }
+    // The C++ core's ability estimate, and the difficulty it steered the next question toward.
+    if (out.ability) {
+      const ab = out.ability;
+      html += `<div class="ledger-attn">Ability ${ab.theta.toFixed(1)} ± ${ab.se.toFixed(1)} · engine suggests difficulty ${ab.next}</div>`;
+    }
   } else {
     html += `<div class="tag">OPENING</div>`;
   }
@@ -570,7 +159,21 @@ function addLedger(out, qIndex) {
   } else {
     html += `<div class="decision"><b>${asker.name} takes Q${qIndex}</b> · difficulty ${out.decision.difficulty}/5<br>${esc(out.decision.reason)}</div>`;
   }
-  el.innerHTML = html;
+  // Each entry folds into one summary line, so the ledger stays readable as it grows.
+  let summary = out.assessment
+    ? `Answer ${qIndex - 1} · ${esc(out.assessment.topic)} · ${out.assessment.score}/5`
+    : "Opening";
+  if (out.final) {
+    summary += " → verdict";
+  } else {
+    summary += ` → ${asker.name} asks`;
+  }
+  el.innerHTML = `<details open><summary>${summary}</summary><div class="entrybody">${html}</div></details>`;
+
+  // Only the newest entry stays open; older ones collapse but can be reopened.
+  for (const older of $("ledgerList").querySelectorAll("details[open]")) {
+    older.open = false;
+  }
   $("ledgerList").prepend(el);
 }
 
@@ -677,243 +280,20 @@ let sessionState = null;
 let hosted = false;
 let busy = false;
 
-// ---------- coding round (in-browser judge) ----------
-let problem = null;
-let lastRun = null;
-const codeEl = $("code");
-codeEl.addEventListener("keydown", (e) => {
-  if (e.key === "Tab") {
-    e.preventDefault();
-    const { selectionStart: a, selectionEnd: b } = codeEl;
-    codeEl.value = codeEl.value.slice(0, a) + "  " + codeEl.value.slice(b);
-    codeEl.selectionStart = codeEl.selectionEnd = a + 2;
-  }
+// ---------- coding round ----------
+// The editor, judge, integrity counters and the chat with Theo live in coding.js.
+const coding = createCodingRound({
+  api,
+  speak,
+  stopSpeaking: voice.stopSpeaking,
+  setMood,
+  setStatus,
+  getSession: () => ({ id: sessionId, state: sessionState }),
+  setSessionState: (state) => {
+    sessionState = state || sessionState;
+  },
+  submitAnswer: (text, extra) => sendAnswer(text, extra),
 });
-
-const WORKER_SRC = `
-onmessage = (e) => {
-  const { code, fn, tests } = e.data;
-  const results = [];
-  let f;
-  try {
-    f = new Function(code + "\\n;return " + fn + ";")();
-  } catch (err) {
-    postMessage({ compileError: String(err) });
-    return;
-  }
-  for (const t of tests) {
-    try {
-      const args = JSON.parse(t.args_json);
-      const expected = JSON.parse(t.expected_json);
-      const got = f(...structuredClone(args));
-      const pass = JSON.stringify(got) === JSON.stringify(expected);
-      results.push({ args: t.args_json, expected: t.expected_json, got: JSON.stringify(got), pass });
-    } catch (err) {
-      results.push({ args: t.args_json, expected: t.expected_json, got: "error: " + err.message, pass: false });
-    }
-  }
-  postMessage({ results });
-};`;
-const workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
-
-// Python runs in a long-lived Pyodide worker (loading takes a few seconds), restarted after a timeout.
-let lang = localStorage.getItem("hotseat_lang") || "python";
-let pyWorker = null;
-let pyReady = false;
-let pyFailed = false;
-const PY_LOAD_FAILED = "Python could not load. Switch the language to JavaScript and run again.";
-
-function startPyWorker() {
-  pyReady = false;
-  pyFailed = false;
-  pyWorker = new Worker("/py-worker.js");
-  pyWorker.onerror = () => {
-    pyFailed = true;
-  };
-  pyWorker.addEventListener("message", (e) => {
-    if (e.data && e.data.ready) {
-      pyReady = true;
-      if (problem && lang === "python") {
-        $("testSummary").textContent = `Python ready · ${problem.tests.length} hidden tests`;
-      }
-    }
-  });
-}
-
-function runJs() {
-  return new Promise((resolve) => {
-    const w = new Worker(workerUrl);
-    const timer = setTimeout(() => {
-      w.terminate();
-      resolve({ compileError: "Timed out after 3s (infinite loop?)" });
-    }, 3000);
-    w.onmessage = (e) => {
-      clearTimeout(timer);
-      w.terminate();
-      resolve(e.data);
-    };
-    w.postMessage({ code: codeEl.value, fn: problem.function_name, tests: problem.tests });
-  });
-}
-
-function runPy() {
-  if (!pyWorker) {
-    startPyWorker();
-  }
-  return new Promise((resolve) => {
-    const w = pyWorker;
-    let timer = null;
-
-    const fail = () => {
-      clearTimeout(timer);
-      clearTimeout(loadTimer);
-      w.removeEventListener("message", onMsg);
-      w.removeEventListener("error", fail);
-      w.terminate();
-      pyWorker = null;
-      resolve({ compileError: PY_LOAD_FAILED });
-    };
-
-    if (pyFailed) {
-      fail();
-      return;
-    }
-
-    // Pyodide comes from a CDN; if it never answers, don't leave "Running…" up forever
-    const loadTimer = setTimeout(fail, 30000);
-
-    const onMsg = (e) => {
-      const d = e.data || {};
-      if (d.ready) {
-        return;
-      }
-      clearTimeout(loadTimer);
-      if (d.started) {
-        // The clock starts once Pyodide is loaded, so load time never counts against the candidate.
-        timer = setTimeout(() => {
-          w.removeEventListener("message", onMsg);
-          w.terminate();
-          startPyWorker();
-          resolve({ compileError: "Timed out after 5s (infinite loop?)" });
-        }, 5000);
-        return;
-      }
-      clearTimeout(timer);
-      w.removeEventListener("message", onMsg);
-      w.removeEventListener("error", fail);
-      resolve(d);
-    };
-    w.addEventListener("message", onMsg);
-    w.addEventListener("error", fail);
-    w.postMessage({ code: codeEl.value, fn: problem.function_name, tests: problem.tests });
-  });
-}
-
-function runTestsOnce() {
-  if (lang === "python") {
-    if (!pyReady) {
-      $("testSummary").textContent = "Loading Python…";
-    }
-    return runPy();
-  }
-  return runJs();
-}
-
-// one run at a time: two Python runs would share a single worker and mix up results
-async function runTests() {
-  $("runBtn").disabled = true;
-  $("submitCode").disabled = true;
-  try {
-    return await runTestsOnce();
-  } finally {
-    $("runBtn").disabled = false;
-    $("submitCode").disabled = false;
-  }
-}
-
-function setLang(next) {
-  if (
-    problem &&
-    codeEl.value.trim() !== starterFor(lang).trim() &&
-    !confirm("Switch language? Your current code will be replaced by the starter.")
-  ) {
-    $("langSel").value = lang;
-    return;
-  }
-  lang = next;
-  localStorage.setItem("hotseat_lang", lang);
-  $("langPill").textContent = `LIVE CODING · ${lang === "python" ? "Python" : "JavaScript"}`;
-  if (problem) {
-    codeEl.value = starterFor(lang);
-  }
-  if (lang === "python" && !pyWorker) {
-    startPyWorker();
-  }
-}
-function starterFor(l) {
-  if (!problem) {
-    return "";
-  }
-  return l === "python" ? problem.starter_code_python : problem.starter_code;
-}
-$("langSel").value = lang;
-$("langSel").addEventListener("change", (e) => setLang(e.target.value));
-
-$("runBtn").onclick = async () => {
-  $("testSummary").textContent = "Running…";
-  const r = await runTests();
-  lastRun = r;
-  if (r.compileError) {
-    $("testSummary").textContent = r.compileError;
-    $("testList").innerHTML = "";
-    return;
-  }
-  const passed = r.results.filter((x) => x.pass).length;
-  $("testSummary").textContent = `${passed}/${r.results.length} tests passed`;
-  $("testList").innerHTML = r.results
-    .map(
-      (x, i) =>
-        `<span class="t ${x.pass ? "pass" : "fail"}" title="args ${esc(x.args)} → expected ${esc(x.expected)}, got ${esc(x.got)}">#${i + 1} ${x.pass ? "✓" : "✗"}</span>`,
-    )
-    .join("");
-  setMood("tech", passed === r.results.length ? "impressed" : passed > r.results.length / 2 ? "neutral" : "concerned");
-};
-
-$("submitCode").onclick = async () => {
-  const r = await runTests();
-  lastRun = r;
-  const summary = r.compileError
-    ? `Code did not run: ${r.compileError}`
-    : `${r.results.filter((x) => x.pass).length}/${r.results.length} hidden tests passed. Failures: ${
-        r.results
-          .filter((x) => !x.pass)
-          .map((x) => `args ${x.args} expected ${x.expected} got ${x.got}`)
-          .join("; ") || "none"
-      }`;
-  const notes = answerBox.value.trim();
-  answerBox.value = `[LIVE CODING: ${problem.title} · language: ${lang === "python" ? "Python" : "JavaScript"}]\n${codeEl.value}\n\n[JUDGE] ${summary}${notes ? `\n[CANDIDATE EXPLANATION] ${notes}` : ""}`;
-  $("ide").classList.add("hidden");
-  $("dock").classList.remove("hidden");
-  problem = null;
-  sendAnswer();
-};
-
-function openIde(p) {
-  problem = p;
-  $("pTitle").textContent = p.title;
-  $("pDesc").textContent = p.description;
-  $("langSel").value = lang;
-  $("langPill").textContent = `LIVE CODING · ${lang === "python" ? "Python" : "JavaScript"}`;
-  codeEl.value = starterFor(lang);
-  $("testSummary").textContent = `${p.tests.length} hidden tests`;
-  if (lang === "python" && !pyWorker) {
-    startPyWorker();
-  }
-  $("testList").innerHTML = "";
-  $("ide").classList.remove("hidden");
-  $("dock").classList.add("hidden");
-  codeEl.focus();
-}
 
 async function handleTurn(out) {
   setProgress(out.index, out.total);
@@ -923,12 +303,14 @@ async function handleTurn(out) {
   await speak(out.decision.asker, out.question);
   clearBids();
   if (out.problem) {
-    openIde(out.problem);
-    setStatus("Coding round. Talk through your approach in the answer box if you like, then submit.");
     $("sendBtn").disabled = true;
+    coding.open(out.problem);
+    beginQuestion(out.index, "coding");
+    setStatus("Coding round. Talk Theo through your approach in the chat, then submit your code.");
     return;
   }
   setStatus("Your turn. Speak or type, then press Answer.");
+  beginQuestion(out.index, "answer");
   $("sendBtn").disabled = false;
   answerBox.focus();
 }
@@ -936,49 +318,91 @@ async function handleTurn(out) {
 $("startBtn").onclick = async () => {
   $("startBtn").disabled = true;
   $("startBtn").textContent = "The panel is getting ready…";
-  // unlock speech on user gesture
-  speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-  try {
-    conferring = true;
-    const out = await api("/api/start", { role: $("role").value, name: $("name").value.trim() });
-    sessionId = out.session_id;
-    sessionState = out.state;
-    hosted = Boolean(out.hosted);
+  // unlock audio inside the click so the panel's clips can autoplay later
+  voice.unlockVoice();
+  // the camera prompt rides on this click; a denial just leaves the self view hidden
+  startWebcam();
+  // attention tracking reuses that camera and stays off quietly if it was denied
+  startGaze();
 
+  // walk in through the door while the panel prepares its opening question
+  $("intro").classList.add("hidden");
+  const walkIn = playIntro();
+  const started = api("/api/start", { role: $("role").value, name: $("name").value.trim() });
+  // the error is handled below once the walk-in ends; this only stops an early unhandled-rejection warning
+  started.catch(() => {});
+  try {
+    await walkIn;
+    conferring = true;
     // no answering until the opening question has been asked aloud
     $("sendBtn").disabled = true;
-    $("intro").classList.add("hidden");
     for (const id of ["hud", "ledger", "dock"]) {
       $(id).classList.remove("hidden");
     }
+    setStatus("The panel is getting ready…");
+
+    const out = await started;
+    sessionId = out.session_id;
+    sessionState = out.state;
+    hosted = Boolean(out.hosted);
     await handleTurn(out);
   } catch (e) {
     conferring = false;
+    for (const id of ["hud", "ledger", "dock"]) {
+      $(id).classList.add("hidden");
+    }
+    $("intro").classList.remove("hidden");
     $("startBtn").disabled = false;
     $("startBtn").textContent = "Take the seat";
     alert(`Could not start: ${e.message}`);
   }
 };
 
-async function sendAnswer() {
+// Sends one answer and plays the panel's reply. text comes from the coding round; typed and
+// spoken answers come from the answer box. Resolves to { ok, error } so the caller knows whether
+// the panel got it.
+async function sendAnswer(text, extra = {}) {
   if (busy) {
-    return;
+    return { ok: false, error: "the panel is still busy" };
   }
   stopRec();
-  const answer = answerBox.value.trim();
+  const fromBox = typeof text !== "string";
+  const answer = (fromBox ? answerBox.value : text).trim();
   if (!answer) {
     answerBox.focus();
-    return;
+    return { ok: false, error: "the answer is empty" };
   }
   busy = true;
   $("sendBtn").disabled = true;
-  $("ide").classList.add("hidden");
-  answerBox.value = "";
   setStatus("The panel is conferring…");
   conferring = true;
+
+  // The answer stays in the box until the panel has it, so a failed request can simply be sent again.
+  let out = null;
   try {
-    const out = await api("/api/answer", { session_id: sessionId, answer, state: sessionState });
-    sessionState = out.state || sessionState;
+    // Only numbers go with the answer; null when tracking is off, so the field is left out.
+    const attention = questionSummary();
+    const body = { session_id: sessionId, answer, state: sessionState, ...extra };
+    if (attention) {
+      body.attention = attention;
+    }
+    out = await api("/api/answer", body);
+    out.attention = attention;
+  } catch (e) {
+    conferring = false;
+    setStatus(`Error: ${e.message}. Try again.`);
+    $("sendBtn").disabled = false;
+    busy = false;
+    return { ok: false, error: e.message };
+  }
+
+  if (fromBox) {
+    answerBox.value = "";
+  }
+  sessionState = out.state || sessionState;
+
+  // The panel already has the answer, so a playback problem must not leave the interview stuck.
+  try {
     if (out.done) {
       addLedger({ ...out, final: true }, out.index + 1);
       await playDeliberation(out);
@@ -987,13 +411,19 @@ async function sendAnswer() {
       await handleTurn(out);
     }
   } catch (e) {
+    console.error(e);
     conferring = false;
-    setStatus(`Error: ${e.message}. Try again.`);
-    $("sendBtn").disabled = false;
+    if (out.problem && !coding.isOpen()) {
+      coding.open(out.problem);
+    } else if (!out.done && !coding.isOpen()) {
+      setStatus(`Your turn: ${out.question}`);
+      $("sendBtn").disabled = false;
+    }
   }
   busy = false;
+  return { ok: true };
 }
-$("sendBtn").onclick = sendAnswer;
+$("sendBtn").onclick = () => sendAnswer();
 answerBox.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
     $("sendBtn").click();
@@ -1001,6 +431,8 @@ answerBox.addEventListener("keydown", (e) => {
 });
 
 async function finish() {
+  // Attention only matters while answering; stop it before the verdict and the exit scene.
+  stopGaze();
   await speak("manager", "Thank you. Give us a moment to talk it over.");
   await finishVerdict();
 }
@@ -1021,6 +453,12 @@ async function finishVerdict() {
     setMood(vote.agent, vote.vote === "hire" ? "impressed" : "concerned");
   }
   await speak("manager", v.spoken_verdict);
+
+  // walk out of the room and freeze on a last look back, then lay the score card over that still
+  for (const id of ["hud", "ledger", "dock", "ide"]) {
+    $(id).classList.add("hidden");
+  }
+  await playExit();
   renderVerdict(v);
 }
 
@@ -1102,15 +540,64 @@ function renderTrend(profile) {
   return `<div class="trend"><div><h3>Your trend</h3><p>${scores.length} sessions. ${note}</p></div>${sparkline(scores)}</div>`;
 }
 
+const VERDICT_LABEL = { hire: "Hire", lean_hire: "Lean hire", lean_no_hire: "Lean no hire", no_hire: "No hire" };
+const VERDICT_COLOR = { hire: "#7cc47f", lean_hire: "#b8c46a", lean_no_hire: "#e8a33d", no_hire: "#d9634a" };
+
+// score ring: the arc fills by overall / 5
+function scoreRing(overall, color) {
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  const filled = Math.max(0, Math.min(1, overall / 5)) * c;
+  return `<svg class="ring" viewBox="0 0 84 84" width="84" height="84" aria-hidden="true">
+    <circle cx="42" cy="42" r="${r}" class="track" />
+    <circle cx="42" cy="42" r="${r}" class="fill" stroke="${color}" stroke-dasharray="${filled.toFixed(1)} ${c.toFixed(1)}" />
+    <text x="42" y="47" text-anchor="middle">${overall.toFixed(1)}</text>
+  </svg>`;
+}
+
+// one collapsible section of the score card; empty sections are left out
+function verdictSection(title, count, body, open = false) {
+  if (!body) {
+    return "";
+  }
+  const badge = count ? `<span class="count">${count}</span>` : "";
+  return `<details class="vfold"${open ? " open" : ""}><summary><span>${title}</span>${badge}</summary><div class="vfoldbody">${body}</div></details>`;
+}
+
 function renderVerdict(v) {
   clearBids();
-  const label = { hire: "Hire", lean_hire: "Lean hire", lean_no_hire: "Lean no hire", no_hire: "No hire" }[v.verdict];
+  const overall = Number(v.overall) || 0;
+  const label = VERDICT_LABEL[v.verdict] || esc(v.verdict);
+  const color = VERDICT_COLOR[v.verdict] || "#e8a33d";
+
   const votes = v.votes
     .map((x) => {
       const p = PANEL[x.agent];
-      return `<div class="vote"><div style="color:#${p.color.toString(16)};font-weight:600">${p.name}</div><div class="v">${x.vote === "hire" ? "Hire" : "No hire"}</div>${esc(x.reason)}<q>${esc(x.evidence_quote)}</q></div>`;
+      const hex = `#${p.color.toString(16)}`;
+      const yes = x.vote === "hire";
+      return `<div class="vcard" style="--who:${hex}">
+        <div class="vcardhead"><b style="color:${hex}">${p.name}</b><span class="pill ${yes ? "yes" : "no"}">${yes ? "Hire" : "No hire"}</span></div>
+        <p>${esc(x.reason)}</p>
+      </div>`;
     })
     .join("");
+
+  const strengths = (v.strengths || []).map((s) => `<li>${esc(s)}</li>`).join("");
+  const growth = (v.growth || [])
+    .map(
+      (g) =>
+        `<li><b>${esc(g.area)}</b>${g.evidence_quote ? `<q>${esc(g.evidence_quote)}</q>` : ""}<div class="drill">Drill: ${esc(g.drill)}</div></li>`,
+    )
+    .join("");
+  const checks = (v.checks || []).map((c) => `<li>${esc(c)}</li>`).join("");
+  const quotes = v.votes
+    .filter((x) => x.evidence_quote)
+    .map((x) => {
+      const who = PANEL[x.agent];
+      return `<li><b style="color:#${who.color.toString(16)}">${who.name}</b><q>${esc(x.evidence_quote)}</q></li>`;
+    })
+    .join("");
+
   const p = v.profile;
   const bruin =
     v.bruin && v.bruin.ok
@@ -1118,17 +605,46 @@ function renderVerdict(v) {
       : v.hosted
         ? `<b>Memory runs with Bruin on the full install.</b> This hosted demo doesn't keep sessions. Clone the repo and run it locally to see the panel remember you.`
         : `<b>Bruin pipeline</b> did not run this time.`;
+  const memory = `${renderTrend(p)}<div class="bruinbox">${bruin}</div>`;
+
   $("verdict").innerHTML = `
-    <div class="tag" style="color:#8a7e70;font-size:12px;font-weight:600">PANEL VERDICT</div>
-    <div class="vbig">${label} · ${Number(v.overall).toFixed(1)}/5</div>
-    <p style="color:#cfc4b6;line-height:1.5">${esc(v.summary)}</p>
-    <div class="votes">${votes}</div>
-    <div class="vsec"><h3>STRENGTHS</h3><ul>${v.strengths.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
-    <div class="vsec"><h3>WORK ON</h3><ul>${v.growth.map((g) => `<li><b>${esc(g.area)}</b> <q>${esc(g.evidence_quote)}</q><br>Drill: ${esc(g.drill)}</li>`).join("")}</ul></div>
-    <div class="vsec"><h3>ENGINE CHECKS</h3><ul>${(v.checks || []).map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>
-    ${renderTrend(p)}
-    <div class="bruinbox">${bruin}</div>
-    <div style="margin-top:18px;display:flex;gap:10px"><button class="primary" onclick="location.reload()">${v.hosted ? "Go again" : "Go again (the panel remembers)"}</button></div>`;
+    <div class="vhead">
+      ${scoreRing(overall, color)}
+      <div>
+        <div class="tag">Panel verdict</div>
+        <div class="vbig" style="color:${color}">${label}</div>
+        <div class="vscore">${overall.toFixed(1)} / 5 overall${v.score_ci ? ` · 95% CI ${v.score_ci.low.toFixed(1)}-${v.score_ci.high.toFixed(1)}` : ""}</div>
+      </div>
+    </div>
+    <p class="vsummary">${esc(v.summary)}</p>
+    <div class="vcards">${votes}</div>
+    ${verdictSection("Strengths", (v.strengths || []).length, strengths && `<ul>${strengths}</ul>`)}
+    ${verdictSection("Work on", (v.growth || []).length, growth && `<ul>${growth}</ul>`)}
+    ${verdictSection("What they heard", 0, quotes && `<ul class="quotes">${quotes}</ul>`)}
+    ${verdictSection("Attention", v.attention ? v.attention.awayEvents : 0, v.attention && `<p>${esc(v.attention.line)}</p>`)}
+    ${verdictSection("Engine checks", (v.checks || []).length, checks && `<ul>${checks}</ul>`)}
+    ${verdictSection("Memory and trend", 0, memory)}
+    <div class="vactions">
+      <button class="primary" id="comeBackIn">Come back in</button>
+      <span>${v.hosted ? "A fresh panel each time on the hosted demo." : "Same name, so the panel remembers you."}</span>
+    </div>`;
   $("verdict").classList.remove("hidden");
   $("dock").classList.add("hidden");
+  $("comeBackIn").onclick = comeBackIn;
+}
+
+// Walk back in through the door and start a new session under the same name.
+function comeBackIn() {
+  $("verdict").classList.add("hidden");
+  $("ledgerList").innerHTML = "";
+  // the last spoken line from the old session should not greet the new one
+  $("captionWho").textContent = "";
+  $("captionText").textContent = "";
+  $("sendBtn").classList.remove("hidden");
+  const retry = $("retryVerdict");
+  if (retry) {
+    retry.classList.add("hidden");
+  }
+  $("startBtn").disabled = false;
+  $("startBtn").click();
 }

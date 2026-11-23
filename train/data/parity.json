@@ -1,0 +1,390 @@
+{
+  "cases": [
+    {
+      "answer": "Users liked it.",
+      "raw": 1.6643516200913393,
+      "score": 2,
+      "tags": [
+        "vague",
+        "no_numbers"
+      ],
+      "probs": {
+        "no_numbers": 0.8467809341369862,
+        "vague": 0.9226345862810769,
+        "we_not_i": 1.863211248510244e-05,
+        "deflects": 0.15000798105270013,
+        "rambling": 2.128550653099749e-06,
+        "strong_example": 0.000616056898384176,
+        "clear_tradeoffs": 0.02010040548816997,
+        "incomplete_code": 0.10756241472740172
+      }
+    },
+    {
+      "answer": "We just used Firebase because the team lead said to.",
+      "raw": 1.7920884746657526,
+      "score": 2,
+      "tags": [
+        "we_not_i",
+        "vague",
+        "deflects"
+      ],
+      "probs": {
+        "no_numbers": 0.39864547723912735,
+        "vague": 0.8166478460346318,
+        "we_not_i": 0.9957266255141943,
+        "deflects": 0.7629999311274865,
+        "rambling": 0.008400705723151682,
+        "strong_example": 0.0002810169589138851,
+        "clear_tradeoffs": 0.004482660698875684,
+        "incomplete_code": 0.0010230155485561347
+      }
+    },
+    {
+      "answer": "Yeah so a senior on my team said my PR was too big and hard to review. I kind of thought he was being picky, honestly, because other people had merged bigger ones. But I split it into two. I don't know if that fixed his concern, he approved it eventually though.",
+      "raw": 2.600010711358352,
+      "score": 3,
+      "tags": [],
+      "probs": {
+        "no_numbers": 0.22023836531516447,
+        "vague": 0.1728593359303627,
+        "we_not_i": 0.000978772756609911,
+        "deflects": 0.3043437277133296,
+        "rambling": 0.14701259815792372,
+        "strong_example": 0.2050764933954767,
+        "clear_tradeoffs": 0.19282203588521285,
+        "incomplete_code": 0.03070631795625279
+      }
+    },
+    {
+      "answer": "I built the campus room booking app for my university's engineering society. I gathered requirements from the board, wrote the Flask backend, deployed it on Render, and handled support. It now serves about 800 students and handled 3,200 bookings last semester.",
+      "raw": 4.131768762178767,
+      "score": 4,
+      "tags": [
+        "strong_example"
+      ],
+      "probs": {
+        "no_numbers": 0.1137206606429836,
+        "vague": 0.010399224849936627,
+        "we_not_i": 1.2918181566023374e-05,
+        "deflects": 0.053860665941059836,
+        "rambling": 0.000688277162094993,
+        "strong_example": 0.9415557665356258,
+        "clear_tradeoffs": 0.17585310920859976,
+        "incomplete_code": 0.10001039318407352
+      }
+    },
+    {
+      "answer": "A product manager kept adding requirements mid-sprint. I started a short doc listing each request with its cost in days and asked her to pick what to drop. In two sprints mid-sprint additions went from about 6 to 1, and our velocity stabilized.",
+      "raw": 4.3888156086801,
+      "score": 4,
+      "tags": [
+        "strong_example"
+      ],
+      "probs": {
+        "no_numbers": 0.07491228721957956,
+        "vague": 0.014944702399870967,
+        "we_not_i": 0.001650852208072888,
+        "deflects": 0.01468235275475425,
+        "rambling": 0.0012996609194757412,
+        "strong_example": 0.9378434198861882,
+        "clear_tradeoffs": 0.4871049929447345,
+        "incomplete_code": 0.09289796864470087
+      }
+    },
+    {
+      "answer": "Add observability. For an intermittent 502 I added request IDs across nginx and the app, and within a day saw they all hit one pod with a misconfigured keepalive timeout. Fixed the config, 502s went from about 200 a day to 3.",
+      "raw": 4.609225410126672,
+      "score": 5,
+      "tags": [
+        "strong_example"
+      ],
+      "probs": {
+        "no_numbers": 0.011482893159587526,
+        "vague": 0.007429459934033845,
+        "we_not_i": 6.023176299202084e-06,
+        "deflects": 0.014818953523758737,
+        "rambling": 0.0005971423983534915,
+        "strong_example": 0.9020551950657583,
+        "clear_tradeoffs": 0.3434010773010495,
+        "incomplete_code": 0.08611949720362966
+      }
+    },
+    {
+      "answer": "I was sure our mobile users wanted dark mode, because a bunch of people asked on Discord. I pulled the feature request counts and it was a small loud group. The bigger issue in the data was login failures, so I pushed for fixing that first and it helped a lot.",
+      "raw": 2.994947552405512,
+      "score": 3,
+      "tags": [
+        "no_numbers"
+      ],
+      "probs": {
+        "no_numbers": 0.8165078433653283,
+        "vague": 0.16746508933707807,
+        "we_not_i": 0.010739557216928439,
+        "deflects": 0.13883832435688173,
+        "rambling": 0.11225277483549839,
+        "strong_example": 0.14687122920970483,
+        "clear_tradeoffs": 0.283647097779925,
+        "incomplete_code": 0.02672365836971316
+      }
+    },
+    {
+      "answer": "Buy, usually. Auth is easy to get wrong.",
+      "raw": 2.4126077544515945,
+      "score": 2,
+      "tags": [
+        "vague"
+      ],
+      "probs": {
+        "no_numbers": 0.19007717304458102,
+        "vague": 0.4604918538235521,
+        "we_not_i": 0.0001208857823162662,
+        "deflects": 0.21051543791456637,
+        "rambling": 7.130083595673535e-05,
+        "strong_example": 0.002725592451509116,
+        "clear_tradeoffs": 0.1540566190459084,
+        "incomplete_code": 0.15525304726161132
+      }
+    },
+    {
+      "answer": "We had an outage where checkout failed for some users. We checked the dashboards, we found a bad config push for the payment provider, we rolled back, and we added a config validation step. It was down about 40 minutes.",
+      "raw": 3.654949489457485,
+      "score": 4,
+      "tags": [
+        "we_not_i"
+      ],
+      "probs": {
+        "no_numbers": 0.2891424691485273,
+        "vague": 0.0720188249357091,
+        "we_not_i": 0.9908907270518211,
+        "deflects": 0.04311997111335146,
+        "rambling": 0.0025657374470578562,
+        "strong_example": 0.3498809745103742,
+        "clear_tradeoffs": 0.17005635118724086,
+        "incomplete_code": 0.0012223982240792937
+      }
+    },
+    {
+      "answer": "Yes. At a fintech internship I owned an A/B test on the signup form. Hypothesis was that removing the phone number field would raise completion. I computed sample size beforehand, about 6,000 users per arm for a two-point lift at 80 percent power. I ran it for twelve days. Completion went from 61.3 to 64.8 percent, significant at p under 0.01. But I also checked downstream fraud flags, which rose slightly, so I recommended making phone optional rather than removing it. Product went with that.",
+      "raw": 5.066051846775091,
+      "score": 5,
+      "tags": [
+        "strong_example",
+        "clear_tradeoffs"
+      ],
+      "probs": {
+        "no_numbers": 0.0006024960871857927,
+        "vague": 0.0003156189806552997,
+        "we_not_i": 3.716759941660543e-05,
+        "deflects": 0.0008923468114927825,
+        "rambling": 0.003286546742819726,
+        "strong_example": 0.9932739951132352,
+        "clear_tradeoffs": 0.8417830166177495,
+        "incomplete_code": 0.009007662410801278
+      }
+    },
+    {
+      "answer": "Yeah so, uh, at my internship at a ticketing company I designed the seat-hold service. Problem was double-booking during on-sales with about 20,000 concurrent users. I proposed holds as Redis keys with a ten-minute TTL, with the Postgres write only at checkout using a unique constraint as the final guard. I load tested with k6 at 3x expected traffic. Double-bookings went from a few per big event to zero across the next 14 on-sales.",
+      "raw": 4.911289580457305,
+      "score": 5,
+      "tags": [
+        "strong_example",
+        "clear_tradeoffs"
+      ],
+      "probs": {
+        "no_numbers": 0.02335849506322354,
+        "vague": 0.004090787001807643,
+        "we_not_i": 4.5436496472247865e-05,
+        "deflects": 0.01475917327346827,
+        "rambling": 0.011377765114919513,
+        "strong_example": 0.9650612431815555,
+        "clear_tradeoffs": 0.619410953076447,
+        "incomplete_code": 0.041630517084487804
+      }
+    },
+    {
+      "answer": "Um, okay, so, uh, sort it, then take index one from the end, like sorted(nums)[-2]. Oh wait, duplicates, hmm. If it's like 5, 5, 3, should it be 5 or 3? I'd maybe use a set, uh, but then, um, if the list has one element it breaks. I'd, uh, handle that later I guess. Let me, uh, just leave a TODO there for the edge cases.",
+      "raw": 2.805023285958063,
+      "score": 3,
+      "tags": [
+        "rambling",
+        "incomplete_code",
+        "vague"
+      ],
+      "probs": {
+        "no_numbers": 0.01911049761726342,
+        "vague": 0.45538878732915977,
+        "we_not_i": 0.0058008186792696355,
+        "deflects": 0.04052943904015877,
+        "rambling": 0.9699193788361735,
+        "strong_example": 0.023771378976445486,
+        "clear_tradeoffs": 0.0021511903838947813,
+        "incomplete_code": 0.9254334935407121
+      }
+    },
+    {
+      "answer": "For my capstone, a study-group app, I had to pick between polling and WebSockets for chat. Polling every 3 seconds was trivial on our Heroku setup but would have meant about 20 requests a minute per user. WebSockets needed sticky sessions, which our free tier didn't support well. I picked long polling as a middle ground. It cut requests by around 80% in my load test with 50 simulated users, and I documented that we'd move to WebSockets if we paid for a real host.",
+      "raw": 4.957975867852744,
+      "score": 5,
+      "tags": [
+        "strong_example",
+        "clear_tradeoffs"
+      ],
+      "probs": {
+        "no_numbers": 0.006307349255744879,
+        "vague": 0.0012847664910142266,
+        "we_not_i": 0.02081052828106052,
+        "deflects": 0.0021207111327933886,
+        "rambling": 0.007086389386332118,
+        "strong_example": 0.9845541493479801,
+        "clear_tradeoffs": 0.9449693931924648,
+        "incomplete_code": 0.003874825305754162
+      }
+    },
+    {
+      "answer": "My ticket was fixing one flaky test in our React app. I noticed 14 tests used real timers, so I wrote a helper to use fake timers and migrated all of them. CI flake rate dropped from roughly 1 in 8 runs to 1 in 60 over the next month.",
+      "raw": 4.75099647638413,
+      "score": 5,
+      "tags": [
+        "strong_example"
+      ],
+      "probs": {
+        "no_numbers": 0.010748951122463853,
+        "vague": 0.003748916788749373,
+        "we_not_i": 0.00024494200469679834,
+        "deflects": 0.008614502182803517,
+        "rambling": 0.0010167947130695432,
+        "strong_example": 0.9713525809737247,
+        "clear_tradeoffs": 0.28614958524362344,
+        "incomplete_code": 0.01663306775703327
+      }
+    },
+    {
+      "answer": "[LIVE CODING: Valid Parentheses]\ndef valid(s):\n    stack = []\n    pairs = {')':'(', ']':'[', '}':'{'}\n    for c in s:\n        if c in pairs:\n            if not stack or stack.pop() != pairs[c]:\n                return False\n        else:\n            stack.append(c)\n    return True\n[JUDGE] 5/6 hidden tests passed",
+      "raw": 3.3527640633345372,
+      "score": 3,
+      "tags": [
+        "incomplete_code"
+      ],
+      "probs": {
+        "no_numbers": 0.007252982463457445,
+        "vague": 0.13576811842309575,
+        "we_not_i": 0.0002047688543223039,
+        "deflects": 0.00301144248702562,
+        "rambling": 0.0007644732642584879,
+        "strong_example": 0.0023285083009403373,
+        "clear_tradeoffs": 0.006714767285588122,
+        "incomplete_code": 0.9721140844250867
+      }
+    },
+    {
+      "answer": "Hash the URL and store it.",
+      "raw": 2.2758631939848235,
+      "score": 2,
+      "tags": [
+        "vague"
+      ],
+      "probs": {
+        "no_numbers": 0.1749794946891023,
+        "vague": 0.8541633135379894,
+        "we_not_i": 3.847228526735507e-05,
+        "deflects": 0.03593456952837369,
+        "rambling": 3.0960569963087505e-05,
+        "strong_example": 0.00045034001616345987,
+        "clear_tradeoffs": 0.11139697102573148,
+        "incomplete_code": 0.00048785492491273155
+      }
+    },
+    {
+      "answer": "I argued with a senior, Marcus, about using a map instead of a list for a lookup that only ever had five items. I insisted on the map for performance. He asked me to benchmark it, and there was no measurable difference, while the list was easier to read. I conceded and merged his version. It taught me to measure before arguing about performance.",
+      "raw": 3.512251181199398,
+      "score": 4,
+      "tags": [
+        "clear_tradeoffs",
+        "strong_example"
+      ],
+      "probs": {
+        "no_numbers": 0.1623840010137099,
+        "vague": 0.05712458328716941,
+        "we_not_i": 0.00038394604147693156,
+        "deflects": 0.15541588390812391,
+        "rambling": 0.09019788565257587,
+        "strong_example": 0.7303842906068455,
+        "clear_tradeoffs": 0.813646895605866,
+        "incomplete_code": 0.03800854394764001
+      }
+    },
+    {
+      "answer": "Noticed our CI took 22 minutes, so I parallelized the test suite on my own time and got it to 7.",
+      "raw": 3.9531186131146465,
+      "score": 4,
+      "tags": [
+        "strong_example"
+      ],
+      "probs": {
+        "no_numbers": 0.04691494151915652,
+        "vague": 0.04182063798713661,
+        "we_not_i": 0.0008502405017992063,
+        "deflects": 0.07243562500507487,
+        "rambling": 3.9565634741110805e-05,
+        "strong_example": 0.8702439729708004,
+        "clear_tradeoffs": 0.030279088406884876,
+        "incomplete_code": 0.0016282264476294099
+      }
+    },
+    {
+      "answer": "",
+      "raw": 0.8579874050874952,
+      "score": 1,
+      "tags": [
+        "vague",
+        "deflects"
+      ],
+      "probs": {
+        "no_numbers": 0.1994047503806752,
+        "vague": 0.9593251988927883,
+        "we_not_i": 9.993051879279417e-07,
+        "deflects": 0.5355542724126826,
+        "rambling": 7.2509826607614545e-09,
+        "strong_example": 3.124956057304926e-05,
+        "clear_tradeoffs": 0.0010415483981756047,
+        "incomplete_code": 0.09911007792943415
+      }
+    },
+    {
+      "answer": "We did it.",
+      "raw": -0.7649146892860514,
+      "score": 1,
+      "tags": [
+        "we_not_i",
+        "vague",
+        "deflects"
+      ],
+      "probs": {
+        "no_numbers": 0.6382047217003992,
+        "vague": 0.9885897715488547,
+        "we_not_i": 0.9999999520596147,
+        "deflects": 0.9521275779876499,
+        "rambling": 4.4843055422782795e-06,
+        "strong_example": 7.53165754589314e-06,
+        "clear_tradeoffs": 1.4374293549052353e-05,
+        "incomplete_code": 1.6599203106626715e-08
+      }
+    },
+    {
+      "answer": "I cut p99 latency from 900ms to 120ms (87%) by adding a Redis cache. Why? Reads were 95% of traffic.",
+      "raw": 3.801437956859992,
+      "score": 4,
+      "tags": [],
+      "probs": {
+        "no_numbers": 0.00046172016541999567,
+        "vague": 0.04940000654490654,
+        "we_not_i": 6.362322143921203e-07,
+        "deflects": 0.001091861658782418,
+        "rambling": 7.617778077515225e-05,
+        "strong_example": 0.08829127096309078,
+        "clear_tradeoffs": 0.024407040323595853,
+        "incomplete_code": 0.00023248066187074796
+      }
+    }
+  ]
+}

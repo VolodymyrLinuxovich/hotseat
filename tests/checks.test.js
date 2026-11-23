@@ -8,6 +8,11 @@ import {
   checkTurn,
   checkVerdict,
   canonicalTag,
+  checkChatReply,
+  formatDuration,
+  LARGE_PASTE_CHARS,
+  pasteFollowUpHint,
+  summarizeIntegrity,
   closestSentence,
   coverageHint,
   limitSentences,
@@ -16,6 +21,9 @@ import {
   quoteIsReal,
   similarity,
   snakeCase,
+  attentionLine,
+  sanitizeAttention,
+  summarizeAttention,
 } from "../engine/checks.js";
 
 function turn(overrides = {}) {
@@ -288,4 +296,124 @@ test("checkVerdict caps strengths, growth and the spoken verdict", () => {
   assert.ok(v.spoken_verdict.split(" ").length <= 60);
   assert.ok(v.spoken_verdict.endsWith("."));
   assert.ok(checks.some((c) => c.startsWith("Spoken verdict")));
+});
+
+test("summarizeIntegrity reports typing and flags a large paste", () => {
+  const summary = summarizeIntegrity({
+    typed_chars: 40,
+    pasted_chars: 160,
+    pastes: 2,
+    largest_paste: 150,
+    largest_paste_sample: "def two_sum(nums,\n    target):",
+    test_runs: 1,
+    seconds_open: 125,
+  });
+
+  assert.equal(summary.flagged, true);
+  assert.equal(summary.share, 80);
+  assert.match(summary.line, /Typed 40 chars, pasted 160 chars in 2 pastes \(largest 150 at once\)/);
+  assert.match(summary.line, /1 test run before submitting, 2m 05s/);
+  assert.match(summary.line, /began: "def two_sum\(nums, target\):"/);
+  assert.match(pasteFollowUpHint(summary), /walk him through the part they pasted/);
+});
+
+test("summarizeIntegrity keeps small pastes quiet and cleans bad numbers", () => {
+  const small = summarizeIntegrity({
+    typed_chars: 300,
+    pasted_chars: LARGE_PASTE_CHARS,
+    pastes: 1,
+    largest_paste: 999,
+  });
+  assert.equal(small.flagged, false);
+  // the largest paste can't be bigger than everything pasted
+  assert.equal(small.largest, LARGE_PASTE_CHARS);
+  assert.equal(pasteFollowUpHint(small), "");
+
+  const junk = summarizeIntegrity({ typed_chars: "lots", pasted_chars: -5, seconds_open: null });
+  assert.equal(junk.typed, 0);
+  assert.equal(junk.pasted, 0);
+  assert.match(junk.line, /0 test runs before submitting, 0s/);
+
+  assert.equal(summarizeIntegrity(null), null);
+  assert.equal(formatDuration(59), "59s");
+  assert.equal(formatDuration(600), "10m 00s");
+});
+
+test("checkTurn hands the follow-up on pasted code to Theo", () => {
+  const { out, checks } = checkTurn(turn(), session(["manager", "tech"]), { pasteFollowUp: true });
+  assert.equal(out.decision.asker, "tech");
+  assert.match(checks[0], /pasted/);
+
+  // Theo may follow up even after asking twice in a row, since he ran the round
+  const raw = turn({ decision: { asker: "tech", reason: "r", difficulty: 3, topic: "coding" } });
+  const again = checkTurn(raw, session(["tech", "tech"]), { pasteFollowUp: true });
+  assert.equal(again.out.decision.asker, "tech");
+});
+
+test("checkChatReply strips code and keeps Theo short", () => {
+  const coded = checkChatReply("Sure, here it is:\n```python\ndef f(x):\n    return x\n```\nTry that.");
+  assert.doesNotMatch(coded.reply, /def f/);
+  assert.ok(coded.checks.some((c) => c.includes("code block")));
+
+  const long = checkChatReply("Good start. Think about duplicates. What about empty input? And negatives?");
+  assert.equal(long.reply, "Good start. Think about duplicates.");
+
+  assert.equal(checkChatReply("```\nonly code\n```").reply, "I'd rather hear your idea first. What's your plan?");
+});
+
+test("sanitizeAttention clamps the browser's numbers and drops unknown events", () => {
+  const a = sanitizeAttention({
+    lookingPct: 140,
+    trackedSeconds: -3,
+    awayEvents: [{ type: "absent", seconds: 7.4, during: "coding" }, { type: "selfie", seconds: 9 }, null],
+  });
+  assert.equal(a.lookingPct, 100);
+  assert.equal(a.trackedSeconds, 0);
+  assert.deepEqual(a.awayEvents, [{ type: "absent", seconds: 7, during: "coding" }]);
+
+  assert.equal(sanitizeAttention(null), null);
+  assert.equal(sanitizeAttention("82%"), null);
+});
+
+test("attentionLine is one short neutral line", () => {
+  const line = attentionLine({
+    lookingPct: 82,
+    trackedSeconds: 40,
+    awayEvents: [{ type: "looking_away", seconds: 7, during: "answer" }],
+  });
+  assert.equal(line, "[ATTENTION] looked at screen 82% of the answer; looked away 7s once");
+
+  const calm = attentionLine({ lookingPct: 97, trackedSeconds: 20, awayEvents: [] });
+  assert.equal(calm, "[ATTENTION] looked at screen 97% of the answer; no long absences");
+
+  assert.equal(attentionLine(null), "");
+});
+
+test("summarizeAttention weights answers by tracked time", () => {
+  const turns = [
+    { answer: "a", attention: { lookingPct: 100, trackedSeconds: 30, awayEvents: [] } },
+    {
+      answer: "b",
+      attention: {
+        lookingPct: 50,
+        trackedSeconds: 90,
+        awayEvents: [
+          { type: "absent", seconds: 12, during: "coding" },
+          { type: "looking_away", seconds: 6, during: "coding" },
+        ],
+      },
+    },
+    { answer: "c" },
+  ];
+
+  const s = summarizeAttention(turns);
+  assert.equal(s.answers, 2);
+  assert.equal(s.lookingPct, 63);
+  assert.equal(s.awayEvents, 2);
+  assert.equal(s.absentEvents, 1);
+  assert.equal(s.longestAway, 12);
+  assert.match(s.line, /63% of the time across 2 answers/);
+
+  assert.equal(summarizeAttention([{ answer: "x" }]), null);
+  assert.equal(summarizeAttention(undefined), null);
 });
