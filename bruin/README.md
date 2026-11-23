@@ -25,21 +25,21 @@ kept. A full run takes well under a second.
 | `mart.topic_stats` | Average score and answer count per topic |
 | `mart.tag_counts` | Tag counts on weak answers (score 3 or below) |
 | `mart.session_trend` | Overall score and verdict per session, in time order |
-| `mart.profile` | One row profile: weak and strong topics, weak tags, trend, focus sentence |
+| `mart.profile` | One profile row per candidate: weak and strong topics, weak tags, trend, focus sentence |
 | `export.profile_json` | `COPY` of `mart.profile` to `data/profile.json.tmp`; `run.sh` renames it atomically |
 
 The focus sentence is a deterministic template. It takes the weakest topic and
 the tag seen most on that topic's weak answers, then adds a probing hint for
 that tag.
 
-## Quality checks (28)
+## Quality checks (34)
 
 - `raw.turns`: `not_null` on session_id, turn, asker, topic, score; `asker`
   accepted values manager, tech, skeptic; `score` min 1 and max 5; `turn`
   positive; custom check for duplicate turns within a session.
 - `raw.sessions`: `session_id` not null and unique; `verdict` accepted values
   hire, no_hire, lean_hire, lean_no_hire; `overall` between 1 and 5.
-- Marts: unique keys, score ranges, positive counts, and exactly one profile row.
+- Marts: unique keys, score ranges, positive counts, one row per candidate and topic or tag, one profile row per candidate, and every candidate with turns has a profile. Every table carries `candidate_id`; rows without one fall back to `demo`.
 
 ## Config
 
