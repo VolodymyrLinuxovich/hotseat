@@ -5,16 +5,76 @@ import { CODING_ROUND, MAX_QUESTIONS, MAX_QUESTION_WORDS } from "./config.js";
 
 const PANEL_LIST = AGENT_IDS.map((id) => `- ${describeAgent(id)}`).join("\n");
 
+function humanize(name) {
+  return String(name).replace(/_/g, " ");
+}
+
+function habitNames(habits, status) {
+  return habits
+    .filter((h) => h.status === status)
+    .map((h) => humanize(h.tag))
+    .join(", ");
+}
+
+// One compact line on what changed since the earlier sessions, from mart.habit_progress and mart.topic_progress.
+function progressLines(profile) {
+  const habits = profile.habits || [];
+  const deltas = profile.topic_deltas || [];
+  const lines = [];
+
+  const fixed = habitNames(habits, "fixed");
+  if (fixed) {
+    lines.push(`Fixed since last time: ${fixed}.`);
+  }
+
+  const repeating = habits
+    .filter((h) => h.status === "repeating")
+    .map((h) => `${humanize(h.tag)} (${h.before}x before, ${h.latest}x last session)`)
+    .join(", ");
+  if (repeating) {
+    lines.push(`Still repeating: ${repeating}.`);
+  }
+
+  const fresh = habitNames(habits, "new");
+  if (fresh) {
+    lines.push(`New last session: ${fresh}.`);
+  }
+
+  const moved = (status) => {
+    return deltas
+      .filter((d) => d.status === status)
+      .map((d) => `${humanize(d.topic)} ${d.before} to ${d.latest}`)
+      .join(", ");
+  };
+  const improved = moved("improved");
+  if (improved) {
+    lines.push(`Improved on: ${improved}.`);
+  }
+  const regressed = moved("regressed");
+  if (regressed) {
+    lines.push(`Regressed on: ${regressed}.`);
+  }
+
+  return lines;
+}
+
 function memoryBlock(profile) {
   if (!profile || !profile.sessions) {
     return "MEMORY: this is the candidate's first session. No history yet.";
+  }
+
+  const progress = progressLines(profile);
+  let progressText = "";
+  if (progress.length > 0) {
+    progressText = `\nProgress since earlier sessions:\n${progress.join("\n")}
+When a fixed habit or improved topic shows up, acknowledge it out loud in the question or a whisper. Press hard on repeating habits and regressed topics.`;
   }
 
   return `MEMORY FROM PAST SESSIONS (computed by the Bruin pipeline over ${profile.sessions} past interviews):
 ${profile.focus || ""}
 Weak topics: ${JSON.stringify(profile.weak_topics || [])}
 Weak habits: ${JSON.stringify(profile.weak_tags || [])}
-Strong topics: ${JSON.stringify(profile.strong_topics || [])}
+Strong topics: ${JSON.stringify(profile.strong_topics || [])}${progressText}
 Use this memory. Probe the weak spots early, and mention in deliberation when the candidate repeats or fixes a past habit.`;
 }
 

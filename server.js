@@ -13,7 +13,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(ROOT, "dist")));
 
 // Simple per-visitor limit so a public link can't burn through API credits.
-const START_LIMIT = Number(process.env.START_LIMIT_PER_HOUR || 4);
+const START_LIMIT = Number(process.env.START_LIMIT_PER_HOUR || 30);
 const starts = new Map();
 
 function allowStart(req) {

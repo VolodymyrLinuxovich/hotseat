@@ -145,6 +145,7 @@ function makeAvatar(id) {
   body.add(torso);
 
   // arms resting on table
+  const hands = [];
   for (const s of [-1, 1]) {
     const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), cloth);
     arm.position.set(s * 0.42, 1.2, 0.25);
@@ -154,6 +155,7 @@ function makeAvatar(id) {
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), skin);
     hand.position.set(s * 0.38, 1.06, 0.58);
     body.add(hand);
+    hands.push({ mesh: hand, rest: hand.position.clone(), side: s });
   }
 
   const head = new THREE.Group();
@@ -240,7 +242,7 @@ function makeAvatar(id) {
 
   const label = document.createElement("div");
   label.className = "label";
-  label.innerHTML = `<div class="n" style="color:#${p.color.toString(16)}">${p.name}</div><div class="r">${p.role}</div><div class="m">listening</div>`;
+  label.innerHTML = `<div class="n" style="color:#${p.color.toString(16)}">${p.name}</div><div class="r">${p.role}</div><div class="m">listening</div><div class="bidmeter"><i style="background:#${p.color.toString(16)}"></i><span></span></div>`;
   document.getElementById("labels").appendChild(label);
 
   return {
@@ -250,6 +252,8 @@ function makeAvatar(id) {
     head,
     mouth,
     brows,
+    eyes,
+    hands,
     cloth,
     ring,
     label,
@@ -258,6 +262,9 @@ function makeAvatar(id) {
     look: new THREE.Vector3(0, 1.8, 6),
     nod: 0,
     bubbleUntil: 0,
+    // stagger blinks so the three never blink in sync
+    nextBlink: 1 + Math.random() * 3,
+    blink: 0,
   };
 }
 for (const id of Object.keys(PANEL)) {
@@ -291,8 +298,11 @@ function allLookAt(target) {
 }
 
 let conferring = false;
+// who is whispering right now, so the others can turn toward them
+let whisperer = null;
 const clock = new THREE.Clock();
 const tmpV = new THREE.Vector3();
+
 function resize() {
   const w = innerWidth;
   const h = innerHeight;
@@ -304,16 +314,23 @@ addEventListener("resize", resize);
 resize();
 
 function animate() {
-  const t = clock.getElapsedTime();
+  // getDelta must run first: getElapsedTime also resets the delta clock
   const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
   for (const a of Object.values(avatars)) {
     // breathing
     a.body.position.y = Math.sin(t * 1.6 + a.g.position.x) * 0.012;
     // conferring: heads turn to each other and lean in
     if (conferring) {
       const others = Object.keys(avatars).filter((k) => k !== a.id);
-      const pick = others[Math.floor(((t * 0.7 + a.g.position.x) % 2) + 2) % 2];
-      lookAt(a.id, pick);
+
+      if (whisperer && whisperer !== a.id) {
+        lookAt(a.id, whisperer);
+      } else {
+        // the whisperer (or everyone, between whispers) glances from one colleague to the other
+        const pick = others[Math.floor(((t * 0.7 + a.g.position.x) % 2) + 2) % 2];
+        lookAt(a.id, pick);
+      }
     }
     // head look
     const local = a.head.worldToLocal(tmpV.copy(a.look));
@@ -330,6 +347,32 @@ function animate() {
     } else {
       a.head.rotation.x *= 0.9;
     }
+    // blinks: a quick close and open every few seconds
+    if (t > a.nextBlink) {
+      a.blink = 1;
+      a.nextBlink = t + 2.5 + Math.random() * 3.5;
+    }
+    const lid = a.blink > 0 ? Math.abs(Math.cos(a.blink * Math.PI)) : 1;
+    for (const eye of a.eyes) {
+      eye.scale.y = Math.max(0.1, lid);
+    }
+    a.blink = Math.max(0, a.blink - dt * 7);
+
+    // hand gestures while talking, one hand at a time like a person explaining
+    for (const h of a.hands) {
+      let lift = 0;
+      let reach = 0;
+      if (a.speaking) {
+        const phase = t * 2.2 + a.g.position.x + (h.side > 0 ? 0 : Math.PI);
+        lift = Math.max(0, Math.sin(phase)) * 0.11;
+        reach = Math.max(0, Math.sin(phase)) * 0.08;
+      }
+      const target = h.rest.y + lift;
+      h.mesh.position.y += (target - h.mesh.position.y) * 0.12;
+      h.mesh.position.z += (h.rest.z + reach - h.mesh.position.z) * 0.12;
+      h.mesh.position.x += (h.rest.x - h.side * reach * 0.6 - h.mesh.position.x) * 0.12;
+    }
+
     // speaking
     const talk = a.speaking ? 0.5 + Math.abs(Math.sin(t * 13 + a.g.position.x)) * 3.2 : 1;
     a.mouth.scale.y += (talk - a.mouth.scale.y) * 0.4;
@@ -471,6 +514,8 @@ function startRec() {
 }
 function stopRec() {
   if (rec && recording) {
+    // drop late results so an old transcript can't refill a cleared answer box
+    rec.onresult = null;
     rec.stop();
   }
 }
@@ -516,23 +561,63 @@ function addLedger(out, qIndex) {
   }
   const asker = PANEL[out.decision.asker];
   if (out.checks && out.checks.length) {
-    html += `<div class="tag" style="margin-top:10px">ENGINE CHECKS</div>`;
-    html += out.checks.map((c) => `<div class="line check">✓ ${esc(c)}</div>`).join("");
+    html += `<div class="checks"><div class="checkhead">Engine checks</div>`;
+    html += out.checks.map((c) => `<div class="check">${esc(c)}</div>`).join("");
+    html += `</div>`;
   }
-  html += `<div class="decision"><b>${asker.name} takes Q${qIndex}</b> · difficulty ${out.decision.difficulty}/5<br>${esc(out.decision.reason)}</div>`;
+  if (out.final) {
+    html += `<div class="decision"><b>Final deliberation</b><br>Interview complete. The panel moves to the verdict.</div>`;
+  } else {
+    html += `<div class="decision"><b>${asker.name} takes Q${qIndex}</b> · difficulty ${out.decision.difficulty}/5<br>${esc(out.decision.reason)}</div>`;
+  }
   el.innerHTML = html;
   $("ledgerList").prepend(el);
 }
 
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function setBid(id, bid) {
+  const meter = avatars[id].label.querySelector(".bidmeter");
+  const value = Math.max(0, Math.min(1, Number(bid) || 0));
+  meter.classList.add("on");
+  meter.querySelector("i").style.width = `${Math.round(value * 100)}%`;
+  meter.querySelector("span").textContent = `wants the floor ${value.toFixed(2)}`;
+}
+
+function clearBids() {
+  for (const a of Object.values(avatars)) {
+    const meter = a.label.querySelector(".bidmeter");
+    meter.classList.remove("on");
+    meter.querySelector("i").style.width = "0%";
+    a.label.classList.remove("floor", "yield");
+  }
+}
+
 async function playDeliberation(out) {
   conferring = true;
+  clearBids();
+
   for (const d of out.deliberation) {
     const a = avatars[d.agent];
+    whisperer = d.agent;
     a.label.querySelector(".m").textContent = `“${d.says.length > 60 ? d.says.slice(0, 58) + "…" : d.says}”`;
     a.speaking = true;
-    await new Promise((r) => setTimeout(r, 1500));
+    setBid(d.agent, d.bid);
+    await wait(1500);
     a.speaking = false;
   }
+  whisperer = null;
+
+  // show who won the floor for a beat before they speak, so the decision is visible
+  const winner = out.decision && out.decision.asker;
+  if (winner && avatars[winner] && !out.done) {
+    for (const a of Object.values(avatars)) {
+      a.label.classList.add(a.id === winner ? "floor" : "yield");
+    }
+    lookAt(winner, "candidate");
+    await wait(1100);
+  }
+
   conferring = false;
   for (const [id, mood] of Object.entries(out.moods)) {
     setMood(id, mood);
@@ -545,7 +630,13 @@ async function api(path, body) {
     headers: { "content-type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const j = await r.json();
+  let j = null;
+  try {
+    j = await r.json();
+  } catch {
+    // a gateway timeout comes back as HTML, not JSON
+    throw new Error("The panel took too long. Try again.");
+  }
   if (!r.ok) {
     throw new Error(j.error || r.statusText);
   }
@@ -629,9 +720,16 @@ const workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javas
 let lang = localStorage.getItem("hotseat_lang") || "python";
 let pyWorker = null;
 let pyReady = false;
+let pyFailed = false;
+const PY_LOAD_FAILED = "Python could not load. Switch the language to JavaScript and run again.";
+
 function startPyWorker() {
   pyReady = false;
+  pyFailed = false;
   pyWorker = new Worker("/py-worker.js");
+  pyWorker.onerror = () => {
+    pyFailed = true;
+  };
   pyWorker.addEventListener("message", (e) => {
     if (e.data && e.data.ready) {
       pyReady = true;
@@ -665,11 +763,31 @@ function runPy() {
   return new Promise((resolve) => {
     const w = pyWorker;
     let timer = null;
+
+    const fail = () => {
+      clearTimeout(timer);
+      clearTimeout(loadTimer);
+      w.removeEventListener("message", onMsg);
+      w.removeEventListener("error", fail);
+      w.terminate();
+      pyWorker = null;
+      resolve({ compileError: PY_LOAD_FAILED });
+    };
+
+    if (pyFailed) {
+      fail();
+      return;
+    }
+
+    // Pyodide comes from a CDN; if it never answers, don't leave "Running…" up forever
+    const loadTimer = setTimeout(fail, 30000);
+
     const onMsg = (e) => {
       const d = e.data || {};
       if (d.ready) {
         return;
       }
+      clearTimeout(loadTimer);
       if (d.started) {
         // The clock starts once Pyodide is loaded, so load time never counts against the candidate.
         timer = setTimeout(() => {
@@ -682,14 +800,16 @@ function runPy() {
       }
       clearTimeout(timer);
       w.removeEventListener("message", onMsg);
+      w.removeEventListener("error", fail);
       resolve(d);
     };
     w.addEventListener("message", onMsg);
+    w.addEventListener("error", fail);
     w.postMessage({ code: codeEl.value, fn: problem.function_name, tests: problem.tests });
   });
 }
 
-function runTests() {
+function runTestsOnce() {
   if (lang === "python") {
     if (!pyReady) {
       $("testSummary").textContent = "Loading Python…";
@@ -697,6 +817,18 @@ function runTests() {
     return runPy();
   }
   return runJs();
+}
+
+// one run at a time: two Python runs would share a single worker and mix up results
+async function runTests() {
+  $("runBtn").disabled = true;
+  $("submitCode").disabled = true;
+  try {
+    return await runTestsOnce();
+  } finally {
+    $("runBtn").disabled = false;
+    $("submitCode").disabled = false;
+  }
 }
 
 function setLang(next) {
@@ -763,7 +895,7 @@ $("submitCode").onclick = async () => {
   $("ide").classList.add("hidden");
   $("dock").classList.remove("hidden");
   problem = null;
-  $("sendBtn").click();
+  sendAnswer();
 };
 
 function openIde(p) {
@@ -789,6 +921,7 @@ async function handleTurn(out) {
   addLedger(out, out.index);
   await playDeliberation(out);
   await speak(out.decision.asker, out.question);
+  clearBids();
   if (out.problem) {
     openIde(out.problem);
     setStatus("Coding round. Talk through your approach in the answer box if you like, then submit.");
@@ -811,6 +944,9 @@ $("startBtn").onclick = async () => {
     sessionId = out.session_id;
     sessionState = out.state;
     hosted = Boolean(out.hosted);
+
+    // no answering until the opening question has been asked aloud
+    $("sendBtn").disabled = true;
     $("intro").classList.add("hidden");
     for (const id of ["hud", "ledger", "dock"]) {
       $(id).classList.remove("hidden");
@@ -824,7 +960,7 @@ $("startBtn").onclick = async () => {
   }
 };
 
-$("sendBtn").onclick = async () => {
+async function sendAnswer() {
   if (busy) {
     return;
   }
@@ -844,10 +980,7 @@ $("sendBtn").onclick = async () => {
     const out = await api("/api/answer", { session_id: sessionId, answer, state: sessionState });
     sessionState = out.state || sessionState;
     if (out.done) {
-      addLedger(
-        { ...out, decision: { ...out.decision, reason: "Interview complete. Panel moves to final deliberation." } },
-        out.index + 1,
-      );
+      addLedger({ ...out, final: true }, out.index + 1);
       await playDeliberation(out);
       await finish();
     } else {
@@ -859,7 +992,8 @@ $("sendBtn").onclick = async () => {
     $("sendBtn").disabled = false;
   }
   busy = false;
-};
+}
+$("sendBtn").onclick = sendAnswer;
 answerBox.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
     $("sendBtn").click();
@@ -868,9 +1002,20 @@ answerBox.addEventListener("keydown", (e) => {
 
 async function finish() {
   await speak("manager", "Thank you. Give us a moment to talk it over.");
+  await finishVerdict();
+}
+
+async function finishVerdict() {
   setStatus("Final deliberation, then the Bruin pipeline updates your memory…");
   conferring = true;
-  const v = await api("/api/verdict", { session_id: sessionId, state: sessionState });
+  let v = null;
+  try {
+    v = await api("/api/verdict", { session_id: sessionId, state: sessionState });
+  } catch (e) {
+    conferring = false;
+    showVerdictRetry(e.message);
+    return;
+  }
   conferring = false;
   for (const vote of v.votes) {
     setMood(vote.agent, vote.vote === "hire" ? "impressed" : "concerned");
@@ -879,7 +1024,86 @@ async function finish() {
   renderVerdict(v);
 }
 
+// the interview is over, so the Answer button is useless here; offer a retry instead
+function showVerdictRetry(message) {
+  setStatus(`Verdict failed: ${message}`);
+  $("sendBtn").classList.add("hidden");
+  let retry = $("retryVerdict");
+  if (!retry) {
+    retry = document.createElement("button");
+    retry.id = "retryVerdict";
+    retry.className = "primary";
+    retry.textContent = "Retry verdict";
+    $("sendBtn").after(retry);
+  }
+  retry.classList.remove("hidden");
+  retry.disabled = false;
+  retry.onclick = async () => {
+    retry.disabled = true;
+    retry.classList.add("hidden");
+    setStatus("Asking the panel again…");
+    await finishVerdict();
+  };
+}
+
+function parseTrend(trend) {
+  let list = trend;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list.map((x) => Number(x && x.overall)).filter((n) => Number.isFinite(n));
+}
+
+// tiny line chart of overall score per session, on a fixed 1 to 5 scale so sessions compare honestly
+function sparkline(scores) {
+  const w = 240;
+  const h = 84;
+  const pad = 14;
+  const x = (i) => pad + (i * (w - pad * 2)) / (scores.length - 1);
+  const y = (s) => h - pad - ((s - 1) / 4) * (h - pad * 2);
+  const points = scores.map((s, i) => `${x(i).toFixed(1)},${y(s).toFixed(1)}`).join(" ");
+  const dots = scores
+    .map((s, i) => {
+      const last = i === scores.length - 1;
+      const dot = `<circle cx="${x(i).toFixed(1)}" cy="${y(s).toFixed(1)}" r="${last ? 4 : 2.5}" fill="${last ? "#e8a33d" : "#a89c8d"}" />`;
+      const text = `<text x="${x(i).toFixed(1)}" y="${(y(s) - 7).toFixed(1)}" text-anchor="middle">${s.toFixed(1)}</text>`;
+      return dot + text;
+    })
+    .join("");
+
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Overall score per session">
+    <line x1="${pad}" x2="${w - pad}" y1="${y(3).toFixed(1)}" y2="${y(3).toFixed(1)}" class="mid" />
+    <polyline points="${points}" fill="none" stroke="#e8a33d" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+    ${dots}
+  </svg>`;
+}
+
+function renderTrend(profile) {
+  const scores = parseTrend(profile && profile.trend);
+  if (scores.length < 2) {
+    return "";
+  }
+
+  const delta = scores[scores.length - 1] - scores[0];
+  let note = "Holding steady across sessions.";
+  if (delta > 0.05) {
+    note = `Up ${delta.toFixed(1)} since your first session.`;
+  } else if (delta < -0.05) {
+    note = `Down ${Math.abs(delta).toFixed(1)} since your first session. The panel is pushing harder.`;
+  }
+
+  return `<div class="trend"><div><h3>Your trend</h3><p>${scores.length} sessions. ${note}</p></div>${sparkline(scores)}</div>`;
+}
+
 function renderVerdict(v) {
+  clearBids();
   const label = { hire: "Hire", lean_hire: "Lean hire", lean_no_hire: "Lean no hire", no_hire: "No hire" }[v.verdict];
   const votes = v.votes
     .map((x) => {
@@ -902,8 +1126,9 @@ function renderVerdict(v) {
     <div class="vsec"><h3>STRENGTHS</h3><ul>${v.strengths.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
     <div class="vsec"><h3>WORK ON</h3><ul>${v.growth.map((g) => `<li><b>${esc(g.area)}</b> <q>${esc(g.evidence_quote)}</q><br>Drill: ${esc(g.drill)}</li>`).join("")}</ul></div>
     <div class="vsec"><h3>ENGINE CHECKS</h3><ul>${(v.checks || []).map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>
+    ${renderTrend(p)}
     <div class="bruinbox">${bruin}</div>
-    <div style="margin-top:18px;display:flex;gap:10px"><button class="primary" onclick="location.reload()">Go again (the panel remembers)</button></div>`;
+    <div style="margin-top:18px;display:flex;gap:10px"><button class="primary" onclick="location.reload()">${v.hosted ? "Go again" : "Go again (the panel remembers)"}</button></div>`;
   $("verdict").classList.remove("hidden");
   $("dock").classList.add("hidden");
 }

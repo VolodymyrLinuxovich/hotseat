@@ -12,12 +12,17 @@ depends:
   - mart.topic_stats
   - mart.tag_counts
   - mart.session_trend
+  - mart.habit_progress
+  - mart.topic_progress
 custom_checks:
   - name: one profile row per candidate
     query: SELECT count(*) - count(DISTINCT candidate_id) FROM mart.profile
     value: 0
   - name: every candidate with turns has a profile
     query: SELECT count(*) FROM (SELECT DISTINCT candidate_id FROM raw.turns) t ANTI JOIN mart.profile p USING (candidate_id)
+    value: 0
+  - name: habits and topic deltas are lists, never null
+    query: SELECT count(*) FROM mart.profile WHERE habits IS NULL OR topic_deltas IS NULL
     value: 0
 columns:
   - name: candidate_id
@@ -103,5 +108,25 @@ SELECT
             || replace(b.t_tag, '_', ' ') || '; ' || b.hint || '.'
         ELSE 'No weak spots yet; run a balanced interview and raise the difficulty.'
     END AS focus,
+    -- Habit changes since the earlier sessions. Repeating habits come first because the panel should press on
+    -- them; fixed ones next so the panel can say so out loud. Capped so the prompt stays short.
+    coalesce((
+        SELECT list({'tag': tag, 'status': status, 'before': before, 'latest': latest} ORDER BY pri, latest + before DESC, tag)
+        FROM (
+            SELECT *, CASE status WHEN 'repeating' THEN 0 WHEN 'fixed' THEN 1 ELSE 2 END AS pri
+            FROM mart.habit_progress h
+            WHERE h.candidate_id = b.candidate_id
+            ORDER BY pri, latest + before DESC, tag
+            LIMIT 8
+        )
+    ), []) AS habits,
+
+    -- Biggest score moves first, so the top of the list is what changed most.
+    coalesce((
+        SELECT list({'topic': topic, 'status': status, 'before': before_avg, 'latest': latest_avg, 'delta': delta} ORDER BY abs(delta) DESC, topic)
+        FROM mart.topic_progress p
+        WHERE p.candidate_id = b.candidate_id
+    ), []) AS topic_deltas,
+
     strftime(now() AT TIME ZONE 'UTC', '%Y-%m-%dT%H:%M:%SZ') AS generated_at
 FROM base b

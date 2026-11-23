@@ -25,20 +25,34 @@ kept. A full run takes well under a second.
 | `mart.topic_stats` | Average score and answer count per topic |
 | `mart.tag_counts` | Tag counts on weak answers (score 3 or below) |
 | `mart.session_trend` | Overall score and verdict per session, in time order |
-| `mart.profile` | One profile row per candidate: weak and strong topics, weak tags, trend, focus sentence |
+| `mart.habit_progress` | Per candidate and tag: weak-answer hits in earlier sessions vs the latest one, status fixed, repeating or new |
+| `mart.topic_progress` | Per candidate and topic: earlier average vs latest average, delta, status improved, regressed or steady |
+| `mart.profile` | One profile row per candidate: weak and strong topics, weak tags, trend, focus sentence, `habits`, `topic_deltas` |
 | `export.profile_json` | `COPY` of `mart.profile` to `data/profile.json.tmp`; `run.sh` renames it atomically |
 
 The focus sentence is a deterministic template. It takes the weakest topic and
 the tag seen most on that topic's weak answers, then adds a probing hint for
 that tag.
 
-## Quality checks (34)
+The progress marts split each candidate's turns into their latest session and
+everything before it. A habit is a tag on a weak answer (score 3 or below), and
+praise tags like `strong_example` are ignored. A topic counts as improved or
+regressed when its average moved half a point or more. Candidates with one
+session get empty `habits` and `topic_deltas`.
+
+## Quality checks (55)
 
 - `raw.turns`: `not_null` on session_id, turn, asker, topic, score; `asker`
   accepted values manager, tech, skeptic; `score` min 1 and max 5; `turn`
   positive; custom check for duplicate turns within a session.
 - `raw.sessions`: `session_id` not null and unique; `verdict` accepted values
   hire, no_hire, lean_hire, lean_no_hire; `overall` between 1 and 5.
+- `mart.habit_progress`: one row per candidate and tag, `status` accepted values
+  fixed, repeating, new, counts non negative, custom check that the status
+  matches the before and latest counts, only candidates with an earlier session.
+- `mart.topic_progress`: one row per candidate and topic, both averages between
+  1 and 5, `status` accepted values improved, regressed, steady, custom checks
+  that delta equals latest minus before and that the status matches the delta.
 - Marts: unique keys, score ranges, positive counts, one row per candidate and topic or tag, one profile row per candidate, and every candidate with turns has a profile. Every table carries `candidate_id`; rows without one fall back to `demo`.
 
 ## Config

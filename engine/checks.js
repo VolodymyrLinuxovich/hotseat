@@ -11,6 +11,49 @@ import { MAX_QUESTION_WORDS } from "./config.js";
 const MIN_VALID_TESTS = 3;
 const REFERENCE_TIMEOUT_MS = 500;
 
+// Two questions this similar (word-set Jaccard) count as the same question asked twice.
+const REPEAT_THRESHOLD = 0.6;
+
+const MAX_VERDICT_ITEMS = 3;
+const MAX_VERDICT_WORDS = 60;
+
+// The model invents many names for the same habit. Bruin aggregates tags by exact string,
+// so synonyms are folded onto one canonical tag or the profile splits one habit into five.
+const TAG_SYNONYMS = {
+  lacks_metrics: "no_numbers",
+  no_metrics: "no_numbers",
+  partial_numbers: "no_numbers",
+  missing_numbers: "no_numbers",
+  missing_metrics: "no_numbers",
+  evasive: "deflects",
+  deflected_question: "deflects",
+  deflected: "deflects",
+  dodged: "deflects",
+  dodged_question: "deflects",
+  incomplete_solution: "incomplete_code",
+  incomplete_code: "incomplete_code",
+  unfinished_code: "incomplete_code",
+  we_instead_of_i: "we_not_i",
+  used_we: "we_not_i",
+  no_example: "vague",
+  generic: "vague",
+  generic_answer: "vague",
+};
+
+const NEGATIVE_TAGS = new Set(["no_numbers", "vague", "deflects", "we_not_i", "incomplete_code"]);
+const STRONG_TAGS = new Set(["strong_example", "clear_tradeoffs"]);
+
+// Topics a balanced behavioral and technical loop should touch. Each one also matches a few
+// looser topic names the model tends to pick.
+const COVERAGE_TOPICS = {
+  ownership: ["ownership", "owner", "impact", "leadership"],
+  metrics: ["metrics", "numbers", "measure", "results"],
+  tradeoffs: ["tradeoff", "trade_off"],
+  system_design: ["system_design", "design", "architecture", "scal"],
+  conflict: ["conflict", "disagree", "teamwork", "collaboration"],
+  debugging: ["debug", "incident", "outage", "bug"],
+};
+
 // ---------- small helpers ----------
 
 export function snakeCase(text) {
@@ -33,6 +76,50 @@ export function normalizeText(text) {
 
 function words(text) {
   return new Set(normalizeText(text).split(" ").filter(Boolean));
+}
+
+// Word-set Jaccard overlap between two texts, from 0 (nothing shared) to 1 (same words).
+export function similarity(a, b) {
+  const left = words(a);
+  const right = words(b);
+
+  let shared = 0;
+  for (const w of left) {
+    if (right.has(w)) {
+      shared += 1;
+    }
+  }
+
+  const union = left.size + right.size - shared;
+  if (union === 0) {
+    return 0;
+  }
+  return shared / union;
+}
+
+// Fold a synonym habit tag onto its canonical name. Unknown tags pass through untouched.
+export function canonicalTag(tag) {
+  const key = snakeCase(tag);
+  return TAG_SYNONYMS[key] || key;
+}
+
+// Name the core topics nobody has asked about yet, so the panel steers toward them.
+export function coverageHint(session) {
+  const asked = session.turns.filter((t) => t.question);
+  if (asked.length < 2) {
+    return "";
+  }
+
+  const seen = asked.map((t) => snakeCase(t.topic));
+  const missing = Object.keys(COVERAGE_TOPICS).filter((topic) => {
+    const hints = COVERAGE_TOPICS[topic];
+    return !seen.some((s) => hints.some((h) => s.includes(h)));
+  });
+
+  if (missing.length === 0) {
+    return "";
+  }
+  return `Topics not covered yet: ${missing.join(", ")}. Prefer one of these unless a follow-up is clearly needed.`;
 }
 
 export function splitSentences(text) {
@@ -125,7 +212,8 @@ export function checkTurn(out, session, { coding = false } = {}) {
   }
   if (out.assessment) {
     out.assessment.topic = snakeCase(out.assessment.topic);
-    out.assessment.tags = [...new Set(out.assessment.tags.map(snakeCase))].slice(0, 3);
+    out.assessment.tags = [...new Set(out.assessment.tags.map(canonicalTag))].slice(0, 3);
+    checkScore(out.assessment, checks);
   }
 
   // Deliberation: exactly one whisper per interviewer, in panel order, bids clamped to 0..1.
@@ -172,7 +260,33 @@ export function checkTurn(out, session, { coding = false } = {}) {
   }
   out.question = short;
 
+  // Rewriting a repeated question would need another model call, so the engine only flags it.
+  // The coding round is skipped because its question is replaced by the problem intro.
+  const repeated =
+    !coding && session.turns.some((t) => t.question && similarity(t.question, out.question) >= REPEAT_THRESHOLD);
+  if (repeated) {
+    checks.push("Question overlapped an earlier one.");
+  }
+
   return { out, checks };
+}
+
+// A score has to agree with the habits the same assessment tagged.
+function checkScore(assessment, checks) {
+  const tags = assessment.tags;
+  const negative = tags.filter((t) => NEGATIVE_TAGS.has(t));
+
+  if (assessment.score >= 4 && negative.length > 0) {
+    checks.push(`Score ${assessment.score} clashed with the "${negative[0]}" tag; lowered to 3.`);
+    assessment.score = 3;
+    return;
+  }
+
+  const onlyStrong = tags.length > 0 && tags.every((t) => STRONG_TAGS.has(t));
+  if (assessment.score <= 2 && onlyStrong) {
+    checks.push(`Score ${assessment.score} clashed with only strong tags; raised to 3.`);
+    assessment.score = 3;
+  }
 }
 
 // ---------- coding problem ----------
@@ -252,6 +366,34 @@ export function checkProblem(problem) {
 
 // ---------- verdict ----------
 
+// Cut spoken text to a word limit on a sentence boundary, so the voice never stops mid thought.
+export function limitSentences(text, maxWords) {
+  const total = String(text || "")
+    .split(/\s+/)
+    .filter(Boolean).length;
+  if (total <= maxWords) {
+    return text;
+  }
+
+  const kept = [];
+  let count = 0;
+  for (const sentence of splitSentences(text)) {
+    const n = sentence.split(/\s+/).length;
+    if (count + n > maxWords) {
+      break;
+    }
+    kept.push(sentence);
+    count += n;
+  }
+
+  // The first sentence alone is too long, so fall back to a hard word cut.
+  if (kept.length === 0) {
+    const cut = String(text).split(/\s+/).slice(0, maxWords).join(" ");
+    return `${cut.replace(/[,;:]$/, "")}.`;
+  }
+  return kept.join(" ");
+}
+
 const VERDICT_RANK = { no_hire: 0, lean_no_hire: 1, lean_hire: 2, hire: 3 };
 
 export function checkVerdict(v, answered) {
@@ -268,11 +410,24 @@ export function checkVerdict(v, answered) {
     return true;
   });
 
+  // Long lists bury the point. Keep the top three of each, before quotes are checked
+  // so the ledger never mentions an item that was cut.
+  if (v.strengths.length > MAX_VERDICT_ITEMS) {
+    checks.push(`Cut strengths from ${v.strengths.length} to ${MAX_VERDICT_ITEMS}.`);
+    v.strengths = v.strengths.slice(0, MAX_VERDICT_ITEMS);
+  }
+  if (v.growth.length > MAX_VERDICT_ITEMS) {
+    checks.push(`Cut growth areas from ${v.growth.length} to ${MAX_VERDICT_ITEMS}.`);
+    v.growth = v.growth.slice(0, MAX_VERDICT_ITEMS);
+  }
+
   // Evidence must be the candidate's own words. Fix any quote that isn't.
+  let quotesFixed = 0;
   const fixQuote = (quote, who) => {
     if (quoteIsReal(quote, answers)) {
       return quote;
     }
+    quotesFixed += 1;
     const real = closestSentence(quote, answers);
     checks.push(`${who} quoted words you never said; replaced with your closest real line.`);
     return real;
@@ -302,7 +457,14 @@ export function checkVerdict(v, answered) {
     v.verdict = "lean_no_hire";
   }
 
-  if (checks.length === 0) {
+  // The verdict is read aloud, so it stays short.
+  const spoken = limitSentences(v.spoken_verdict, MAX_VERDICT_WORDS);
+  if (spoken !== v.spoken_verdict) {
+    checks.push(`Spoken verdict was over ${MAX_VERDICT_WORDS} words; trimmed at a sentence.`);
+    v.spoken_verdict = spoken;
+  }
+
+  if (quotesFixed === 0) {
     checks.push("Every quote matched your answers word for word.");
   }
 

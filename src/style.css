@@ -519,7 +519,105 @@ button:disabled {
   font: inherit;
   font-size: 13px;
 }
-.entry .check {
-  color: #9fd0ef;
+
+/* floor bids above each interviewer during deliberation */
+.label .bidmeter {
+  width: 120px;
+  margin: 6px auto 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.label .bidmeter.on {
+  opacity: 1;
+}
+.label .bidmeter i {
+  display: block;
+  height: 5px;
+  width: 0%;
+  border-radius: 3px;
+  transition: width 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.label .bidmeter::before {
+  content: "";
+  display: block;
+  height: 5px;
+  margin-bottom: -5px;
+  border-radius: 3px;
+  background: rgba(243, 236, 226, 0.12);
+}
+.label .bidmeter span {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  color: #a89c8d;
+  font-variant-numeric: tabular-nums;
+}
+.label.floor .n {
+  text-shadow: 0 0 14px currentColor;
+}
+.label.floor .bidmeter span {
+  color: #f3ece2;
+  font-weight: 600;
+}
+.label.floor .bidmeter span::after {
+  content: " · takes the floor";
+  color: #e8a33d;
+}
+.label.yield {
+  opacity: 0.45;
+}
+
+/* engine checks: present but quieter than the panel's own words */
+.entry .checks {
+  margin-top: 10px;
+  padding: 6px 0 2px 10px;
+  border-left: 2px solid #2c3f4c;
+}
+.entry .checkhead {
+  font-size: 11px;
+  color: #6f8796;
+}
+.entry .checks .check {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #8fa9b8;
+}
+
+/* score trend on the verdict card */
+.trend {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #1d1916;
+  border: 1px solid #3a322b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.trend h3 {
   font-size: 12px;
+  color: #e8a33d;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.trend p {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #cfc4b6;
+}
+.spark {
+  flex: none;
+  max-width: 50%;
+  height: auto;
+}
+.spark text {
+  font-size: 9px;
+  fill: #a89c8d;
+  font-family: Inter, sans-serif;
+}
+.spark .mid {
+  stroke: #3a322b;
+  stroke-dasharray: 3 3;
 }

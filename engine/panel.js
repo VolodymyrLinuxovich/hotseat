@@ -4,7 +4,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 
-import { checkProblem, checkTurn, checkVerdict } from "./checks.js";
+import { checkProblem, checkTurn, checkVerdict, coverageHint } from "./checks.js";
 import { CODING_ROUND, MAX_QUESTIONS, MODEL } from "./config.js";
 import { candidateId, logSession, readProfile, runBruin } from "./memory.js";
 import { panelSystem, problemSystem, transcriptText, verdictSystem, verdictTranscript } from "./prompts.js";
@@ -71,6 +71,15 @@ async function makeProblem(session) {
   };
 }
 
+// The transcript plus a nudge toward topics the panel hasn't covered yet.
+function panelUser(session) {
+  const hint = coverageHint(session);
+  if (!hint) {
+    return transcriptText(session);
+  }
+  return `${transcriptText(session)}\n\n${hint}`;
+}
+
 function pushQuestion(session, out, problem) {
   session.turns.push({
     asker: out.decision.asker,
@@ -95,7 +104,7 @@ export function newSession({ name, role }) {
 }
 
 export async function openInterview(session) {
-  const raw = await ask(panelSystem(session), transcriptText(session), TurnSchema);
+  const raw = await ask(panelSystem(session), panelUser(session), TurnSchema);
   const { out, checks } = checkTurn(raw, session);
 
   pushQuestion(session, out, null);
@@ -110,7 +119,7 @@ export async function answerQuestion(session, answer) {
 
   // The panel call and the problem call don't depend on each other, so they run together.
   const [raw, made] = await Promise.all([
-    ask(panelSystem(session), transcriptText(session), TurnSchema),
+    ask(panelSystem(session), panelUser(session), TurnSchema),
     coding ? makeProblem(session) : Promise.resolve(null),
   ]);
   const { out, checks } = checkTurn(raw, session, { coding });

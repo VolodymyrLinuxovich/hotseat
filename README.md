@@ -42,7 +42,7 @@ into a **memory profile**, so the next panel opens on your known weak spots.
 |------|------------------|
 | `server.js` | The panel: scoring, whispers, floor bids, coding problems, verdict, Bruin trigger |
 | `src/main.js` | The 3D room, the three avatars, voices, speech input, ledger, in-browser judge |
-| `bruin/` | The memory pipeline: 7 DuckDB assets, 34 quality checks |
+| `bruin/` | The memory pipeline: 9 DuckDB assets, 55 quality checks |
 
 ---
 
@@ -92,7 +92,7 @@ flowchart LR
 
     subgraph MEM["Memory"]
         JS[(turns.jsonl<br/>sessions.jsonl)]
-        BR[Bruin pipeline<br/>DuckDB, 34 checks]
+        BR[Bruin pipeline<br/>DuckDB, 55 checks]
         PF[(profile per candidate)]
     end
 
@@ -171,7 +171,7 @@ Bruin is not a side integration here. It is the reason the panel can remember yo
 | `mart.profile` | One row per candidate: weak and strong topics, weak habits, trend, focus sentence |
 | `export.profile_json` | Writes the profiles out; `run.sh` swaps the file in atomically |
 
-**34 quality checks** run on every pipeline run: asker must be one of the three interviewers, scores between 1 and 5,
+**55 quality checks** run on every pipeline run: asker must be one of the three interviewers, scores between 1 and 5,
 verdicts from the allowed set, no duplicate turns in a session, one profile row per candidate, and every candidate with
 turns has a profile. If any check fails, the old profile stays and the panel keeps working.
 
@@ -179,6 +179,11 @@ The focus sentence is built in SQL, not by a model, so the memory is reproducibl
 
 > Candidate is weakest on ownership questions (avg 1.7/5 over 3 answers), and those answers keep getting tagged
 > deflects (3x); press on what they personally owned and got wrong.
+
+Two progress marts make the learning visible. `mart.habit_progress` compares each habit in the latest session with the
+sessions before it and marks it fixed, repeating or new, and `mart.topic_progress` does the same for topic scores. The
+panel hears "Fixed since last time: shallow. Still repeating: vague, no numbers" and is told to give credit for fixes out
+loud and press hard on what keeps coming back.
 
 The full pipeline runs in **under half a second** after each interview.
 
@@ -247,7 +252,7 @@ Use Chrome for speech input. Typing works in every browser.
 | `public/py-worker.js` | Python judge: Pyodide in a Web Worker, runs the hidden tests |
 | `src/style.css`, `index.html` | The UI |
 | `bruin/run.sh` | Runs the pipeline and swaps in the new profile |
-| `bruin/hotseat/assets/` | The 7 SQL assets and their checks |
+| `bruin/hotseat/assets/` | The 9 SQL assets and their checks |
 | `bruin/.bruin.yml` | DuckDB connection |
 
 ---
