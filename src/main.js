@@ -487,6 +487,8 @@ loadMemory();
 
 // ---------- flow ----------
 let sessionId = null;
+let sessionState = null;
+let hosted = false;
 let busy = false;
 
 // ---------- coding round (in-browser judge) ----------
@@ -698,6 +700,8 @@ $("startBtn").onclick = async () => {
     conferring = true;
     const out = await api("/api/start", { role: $("role").value, name: $("name").value.trim() });
     sessionId = out.session_id;
+    sessionState = out.state;
+    hosted = Boolean(out.hosted);
     $("intro").classList.add("hidden");
     for (const id of ["hud", "ledger", "dock"]) {
       $(id).classList.remove("hidden");
@@ -728,7 +732,8 @@ $("sendBtn").onclick = async () => {
   setStatus("The panel is conferring…");
   conferring = true;
   try {
-    const out = await api("/api/answer", { session_id: sessionId, answer });
+    const out = await api("/api/answer", { session_id: sessionId, answer, state: sessionState });
+    sessionState = out.state || sessionState;
     if (out.done) {
       addLedger({ ...out, decision: { ...out.decision, reason: "Interview complete. Panel moves to final deliberation." } }, out.index + 1);
       await playDeliberation(out);
@@ -753,7 +758,7 @@ async function finish() {
   await speak("manager", "Thank you. Give us a moment to talk it over.");
   setStatus("Final deliberation, then the Bruin pipeline updates your memory…");
   conferring = true;
-  const v = await api("/api/verdict", { session_id: sessionId });
+  const v = await api("/api/verdict", { session_id: sessionId, state: sessionState });
   conferring = false;
   for (const vote of v.votes) {
     setMood(vote.agent, vote.vote === "hire" ? "impressed" : "concerned");
@@ -771,7 +776,9 @@ function renderVerdict(v) {
   const p = v.profile;
   const bruin = v.bruin && v.bruin.ok
     ? `<b>Memory updated by Bruin</b> in ${(v.bruin.ms / 1000).toFixed(1)}s · ${p ? p.sessions : "?"} sessions, ${p ? p.turns : "?"} answers on file.<br>Next time the panel will focus on: ${esc(p?.focus || "")}`
-    : `<b>Bruin pipeline</b> did not run this time.`;
+    : v.hosted
+      ? `<b>Memory runs with Bruin on the full install.</b> This hosted demo doesn't keep sessions. Clone the repo and run it locally to see the panel remember you.`
+      : `<b>Bruin pipeline</b> did not run this time.`;
   $("verdict").innerHTML = `
     <div class="tag" style="color:#8a7e70;font-size:12px;font-weight:600">PANEL VERDICT</div>
     <div class="vbig">${label} · ${Number(v.overall).toFixed(1)}/5</div>

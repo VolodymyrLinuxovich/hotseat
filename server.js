@@ -8,7 +8,9 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const DATA = path.join(ROOT, "data");
+const HOSTED = Boolean(process.env.VERCEL);
+// Serverless hosts only allow writes under /tmp, and Bruin is not installed there.
+const DATA = HOSTED ? "/tmp/hotseat-data" : path.join(ROOT, "data");
 const MODEL = "claude-opus-5-5";
 const MAX_QUESTIONS = 5;
 
@@ -16,6 +18,31 @@ const client = new Anthropic();
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(ROOT, "dist")));
+
+// Simple per-visitor limit so a public link can't burn through API credits.
+const START_LIMIT = Number(process.env.START_LIMIT_PER_HOUR || 4);
+const starts = new Map();
+function allowStart(req) {
+  const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "?").split(",")[0].trim();
+  const now = Date.now();
+  const recent = (starts.get(ip) || []).filter((t) => now - t < 3600_000);
+  if (recent.length >= START_LIMIT) {
+    return false;
+  }
+  recent.push(now);
+  starts.set(ip, recent);
+  return true;
+}
+
+// The browser carries the interview state, so any server instance can handle the next request.
+function getSession(body) {
+  const s = sessions.get(body.session_id) || (body.state && body.state.id === body.session_id ? body.state : null);
+  if (s && !sessions.has(s.id)) {
+    s.turns = Array.isArray(s.turns) ? s.turns.slice(0, MAX_QUESTIONS) : [];
+    sessions.set(s.id, s);
+  }
+  return s;
+}
 
 const AGENTS = {
   manager: "Maya, Hiring Manager. Warm but direct. Cares about ownership, impact, and how the candidate works with people.",
@@ -178,6 +205,9 @@ app.get("/api/profile", (req, res) => {
 
 app.post("/api/start", async (req, res) => {
   try {
+    if (!allowStart(req)) {
+      return res.status(429).json({ error: "You've hit the demo limit for this hour. Try again later, or run Hotseat locally." });
+    }
     const id = `s_${Date.now()}`;
     const s = {
       id,
@@ -190,7 +220,7 @@ app.post("/api/start", async (req, res) => {
     sessions.set(id, s);
     const out = await panelTurn(s);
     s.turns.push({ asker: out.decision.asker, question: out.question, difficulty: out.decision.difficulty, topic: out.decision.topic, answer: null });
-    res.json({ session_id: id, profile: s.profile, ...out, index: 1, total: MAX_QUESTIONS });
+    res.json({ session_id: id, profile: s.profile, ...out, index: 1, total: MAX_QUESTIONS, state: s, hosted: HOSTED });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e.message || e) });
@@ -199,7 +229,7 @@ app.post("/api/start", async (req, res) => {
 
 app.post("/api/answer", async (req, res) => {
   try {
-    const s = sessions.get(req.body.session_id);
+    const s = getSession(req.body);
     if (!s) {
       return res.status(404).json({ error: "no session" });
     }
@@ -223,7 +253,7 @@ app.post("/api/answer", async (req, res) => {
     if (!done) {
       pushNext(s, out, problem);
     }
-    res.json({ ...out, problem, done, index: s.turns.length, total: MAX_QUESTIONS });
+    res.json({ ...out, problem, done, index: s.turns.length, total: MAX_QUESTIONS, state: s });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e.message || e) });
@@ -237,6 +267,9 @@ function runBruin() {
   return p;
 }
 function runBruinOnce() {
+  if (HOSTED) {
+    return Promise.resolve({ ok: false, log: "Bruin is not installed on the hosted demo" });
+  }
   return new Promise((resolve) => {
     const script = path.join(ROOT, "bruin", "run.sh");
     if (!fs.existsSync(script)) {
@@ -253,7 +286,7 @@ function runBruinOnce() {
 
 app.post("/api/verdict", async (req, res) => {
   try {
-    const s = sessions.get(req.body.session_id);
+    const s = getSession(req.body);
     if (!s) {
       return res.status(404).json({ error: "no session" });
     }
@@ -298,7 +331,7 @@ Quotes must be copied from the candidate's answers. Never invent evidence. Refer
       JSON.stringify({ candidate_id: s.candidate, session_id: s.id, ts: new Date().toISOString(), verdict: v.verdict, overall: v.overall }) + "\n"
     );
     const bruin = await runBruin();
-    res.json({ ...v, bruin: { ok: bruin.ok, ms: bruin.ms }, profile: readProfile(s.candidate) });
+    res.json({ ...v, bruin: { ok: bruin.ok, ms: bruin.ms }, hosted: HOSTED, profile: readProfile(s.candidate) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e.message || e) });
@@ -309,5 +342,9 @@ app.get("/api/bruin/run", async (_req, res) => {
   res.json({ ...(await runBruin()), profile: readProfile(candidateId(_req.query.name)) });
 });
 
-const PORT = process.env.PORT || 8787;
-app.listen(PORT, () => console.log(`hotseat api on :${PORT}`));
+export default app;
+
+if (!HOSTED) {
+  const PORT = process.env.PORT || 8787;
+  app.listen(PORT, () => console.log(`hotseat api on :${PORT}`));
+}
