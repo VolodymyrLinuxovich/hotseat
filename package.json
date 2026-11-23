@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "concurrently -k \"npm:server\" \"vite\"",
     "server": "env -u ANTHROPIC_API_KEY node --env-file=.env server.js",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "node --test tests/",
+    "format": "prettier --write .",
+    "check": "prettier --check . && node --test tests/"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +22,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.5",
+    "prettier": "^3.10.1",
     "vite": "^8.3.8"
   },
   "type": "module"

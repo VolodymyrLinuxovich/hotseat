@@ -48,6 +48,11 @@ onmessage = async (e) => {
     const out = run(code, fn, JSON.stringify(tests));
     postMessage(JSON.parse(out));
   } catch (err) {
-    postMessage({ compileError: String(err.message || err).split("\n").slice(-2).join(" ") });
+    postMessage({
+      compileError: String(err.message || err)
+        .split("\n")
+        .slice(-2)
+        .join(" "),
+    });
   }
 };

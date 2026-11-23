@@ -2,11 +2,41 @@ import * as THREE from "three";
 
 // ---------- panel definition ----------
 const PANEL = {
-  manager: { name: "Maya", role: "Hiring Manager", color: 0xe8a33d, x: -2.3, voice: ["Samantha", "Google US English", "Microsoft Aria", "Karen"], pitch: 1.05, rate: 1.02 },
-  tech: { name: "Theo", role: "Tech Lead", color: 0x5fa8d3, x: 0, voice: ["Daniel", "Google UK English Male", "Microsoft Guy", "Alex"], pitch: 0.95, rate: 1.05 },
-  skeptic: { name: "Sol", role: "Bar Raiser", color: 0xd9634a, x: 2.3, voice: ["Moira", "Tessa", "Google UK English Female", "Microsoft Jenny", "Fiona"], pitch: 0.85, rate: 0.98 },
+  manager: {
+    name: "Maya",
+    role: "Hiring Manager",
+    color: 0xe8a33d,
+    x: -2.3,
+    voice: ["Samantha", "Google US English", "Microsoft Aria", "Karen"],
+    pitch: 1.05,
+    rate: 1.02,
+  },
+  tech: {
+    name: "Theo",
+    role: "Tech Lead",
+    color: 0x5fa8d3,
+    x: 0,
+    voice: ["Daniel", "Google UK English Male", "Microsoft Guy", "Alex"],
+    pitch: 0.95,
+    rate: 1.05,
+  },
+  skeptic: {
+    name: "Sol",
+    role: "Bar Raiser",
+    color: 0xd9634a,
+    x: 2.3,
+    voice: ["Moira", "Tessa", "Google UK English Female", "Microsoft Jenny", "Fiona"],
+    pitch: 0.85,
+    rate: 0.98,
+  },
 };
-const MOOD_LABEL = { neutral: "listening", impressed: "impressed", skeptical: "skeptical", concerned: "concerned", amused: "amused" };
+const MOOD_LABEL = {
+  neutral: "listening",
+  impressed: "impressed",
+  skeptical: "skeptical",
+  concerned: "concerned",
+  amused: "amused",
+};
 
 // ---------- three.js scene ----------
 const canvas = document.getElementById("scene");
@@ -38,11 +68,17 @@ rim.position.set(-4, 3, -5);
 scene.add(rim);
 
 // room
-const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 64), new THREE.MeshStandardMaterial({ color: 0x2a221d, roughness: 0.9 }));
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(14, 64),
+  new THREE.MeshStandardMaterial({ color: 0x2a221d, roughness: 0.9 }),
+);
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
-const wall = new THREE.Mesh(new THREE.PlaneGeometry(30, 10), new THREE.MeshStandardMaterial({ color: 0x231c18, roughness: 1 }));
+const wall = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 10),
+  new THREE.MeshStandardMaterial({ color: 0x231c18, roughness: 1 }),
+);
 wall.position.set(0, 5, -4);
 scene.add(wall);
 // window glow on wall
@@ -62,13 +98,19 @@ table.position.set(0, 0.95, 0.75);
 table.castShadow = true;
 table.receiveShadow = true;
 scene.add(table);
-const front = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.9, 0.06), new THREE.MeshStandardMaterial({ color: 0x3f2a1c, roughness: 0.7 }));
+const front = new THREE.Mesh(
+  new THREE.BoxGeometry(7.4, 0.9, 0.06),
+  new THREE.MeshStandardMaterial({ color: 0x3f2a1c, roughness: 0.7 }),
+);
 front.position.set(0, 0.5, 1.48);
 front.castShadow = true;
 scene.add(front);
 
 // candidate's chair hint (foreground)
-const plant = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.6, 7), new THREE.MeshStandardMaterial({ color: 0x2f5b3a, flatShading: true }));
+const plant = new THREE.Mesh(
+  new THREE.ConeGeometry(0.45, 1.6, 7),
+  new THREE.MeshStandardMaterial({ color: 0x2f5b3a, flatShading: true }),
+);
 plant.position.set(-4.6, 0.8, -1.5);
 scene.add(plant);
 
@@ -79,10 +121,18 @@ function makeAvatar(id) {
   const g = new THREE.Group();
   g.position.set(p.x, 0, -0.1);
   const skin = new THREE.MeshStandardMaterial({ color: 0xe0b896, roughness: 0.6 });
-  const cloth = new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.5, emissive: p.color, emissiveIntensity: 0 });
+  const cloth = new THREE.MeshStandardMaterial({
+    color: p.color,
+    roughness: 0.5,
+    emissive: p.color,
+    emissiveIntensity: 0,
+  });
 
   // chair
-  const chair = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.5, 0.12), new THREE.MeshStandardMaterial({ color: 0x1c1714 }));
+  const chair = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 1.5, 0.12),
+    new THREE.MeshStandardMaterial({ color: 0x1c1714 }),
+  );
   chair.position.set(0, 1.25, -0.45);
   chair.castShadow = true;
   g.add(chair);
@@ -127,12 +177,18 @@ function makeAvatar(id) {
     head.add(brow);
     brows.push(brow);
   }
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.025, 0.02), new THREE.MeshStandardMaterial({ color: 0x6b2c26 }));
+  const mouth = new THREE.Mesh(
+    new THREE.BoxGeometry(0.11, 0.025, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x6b2c26 }),
+  );
   mouth.position.set(0, -0.1, 0.28);
   head.add(mouth);
 
   // identity props
-  const hairMat = new THREE.MeshStandardMaterial({ color: id === "manager" ? 0x3a2416 : id === "tech" ? 0x1f1a17 : 0x8c8c8c, roughness: 0.8 });
+  const hairMat = new THREE.MeshStandardMaterial({
+    color: id === "manager" ? 0x3a2416 : id === "tech" ? 0x1f1a17 : 0x8c8c8c,
+    roughness: 0.8,
+  });
   const hair = new THREE.Mesh(new THREE.SphereGeometry(0.31, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.1), hairMat);
   hair.position.y = 0.03;
   hair.rotation.x = -0.25;
@@ -152,21 +208,30 @@ function makeAvatar(id) {
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.012), frame);
     bridge.position.set(0, 0.05, 0.3);
     head.add(bridge);
-    const laptop = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.38, 0.02), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.6, roughness: 0.3 }));
+    const laptop = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.38, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.6, roughness: 0.3 }),
+    );
     laptop.position.set(0, 1.2, 0.55);
     laptop.rotation.x = -0.3;
     g.add(laptop);
   }
   if (id === "skeptic") {
     brows[0].rotation.z = -0.3;
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0xf1e9d8 }));
+    const pad = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.02, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0xf1e9d8 }),
+    );
     pad.position.set(0.15, 1.02, 0.65);
     pad.rotation.y = -0.2;
     g.add(pad);
   }
 
   // speaking ring on table
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.025, 8, 48), new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0 }));
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.55, 0.025, 8, 48),
+    new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0 }),
+  );
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(0, 1.02, 0.55);
   g.add(ring);
@@ -179,8 +244,20 @@ function makeAvatar(id) {
   document.getElementById("labels").appendChild(label);
 
   return {
-    id, g, body, head, mouth, brows, cloth, ring, label,
-    speaking: false, mood: "neutral", look: new THREE.Vector3(0, 1.8, 6), nod: 0, bubbleUntil: 0,
+    id,
+    g,
+    body,
+    head,
+    mouth,
+    brows,
+    cloth,
+    ring,
+    label,
+    speaking: false,
+    mood: "neutral",
+    look: new THREE.Vector3(0, 1.8, 6),
+    nod: 0,
+    bubbleUntil: 0,
   };
 }
 for (const id of Object.keys(PANEL)) {
@@ -235,7 +312,7 @@ function animate() {
     // conferring: heads turn to each other and lean in
     if (conferring) {
       const others = Object.keys(avatars).filter((k) => k !== a.id);
-      const pick = others[Math.floor((t * 0.7 + a.g.position.x) % 2 + 2) % 2];
+      const pick = others[Math.floor(((t * 0.7 + a.g.position.x) % 2) + 2) % 2];
       lookAt(a.id, pick);
     }
     // head look
@@ -410,7 +487,10 @@ function setStatus(s) {
   $("status").textContent = s;
 }
 function setProgress(index, total) {
-  $("progress").innerHTML = Array.from({ length: total }, (_, i) => `<i class="${i < index - 1 ? "done" : i === index - 1 ? "now" : ""}"></i>`).join("");
+  $("progress").innerHTML = Array.from(
+    { length: total },
+    (_, i) => `<i class="${i < index - 1 ? "done" : i === index - 1 ? "now" : ""}"></i>`,
+  ).join("");
 }
 function setDifficulty(d) {
   $("diffBar").innerHTML = Array.from({ length: 5 }, (_, i) => `<i class="${i < d ? "on" : ""}"></i>`).join("");
@@ -435,6 +515,10 @@ function addLedger(out, qIndex) {
     html += `<div class="line"><span class="who" style="color:#${p.color.toString(16)}">${p.name}</span><span>${esc(d.says)}</span><span class="bid">bid ${d.bid.toFixed(2)}</span></div>`;
   }
   const asker = PANEL[out.decision.asker];
+  if (out.checks && out.checks.length) {
+    html += `<div class="tag" style="margin-top:10px">ENGINE CHECKS</div>`;
+    html += out.checks.map((c) => `<div class="line check">✓ ${esc(c)}</div>`).join("");
+  }
   html += `<div class="decision"><b>${asker.name} takes Q${qIndex}</b> · difficulty ${out.decision.difficulty}/5<br>${esc(out.decision.reason)}</div>`;
   el.innerHTML = html;
   $("ledgerList").prepend(el);
@@ -456,7 +540,11 @@ async function playDeliberation(out) {
 }
 
 async function api(path, body) {
-  const r = await fetch(path, { method: body ? "POST" : "GET", headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
   const j = await r.json();
   if (!r.ok) {
     throw new Error(j.error || r.statusText);
@@ -470,16 +558,23 @@ function renderMemory(p) {
     $("memory").innerHTML = `<b>Panel memory:</b> empty. This is your first session, so the panel starts fresh.`;
     return;
   }
-  const weak = (p.weak_topics || []).map((w) => `<span class="chip bad">${esc(w.topic)} ${w.avg_score.toFixed(1)}</span>`).join("");
+  const weak = (p.weak_topics || [])
+    .map((w) => `<span class="chip bad">${esc(w.topic)} ${w.avg_score.toFixed(1)}</span>`)
+    .join("");
   const tags = (p.weak_tags || []).map((w) => `<span class="chip bad">${esc(w.tag)} ×${w.count}</span>`).join("");
-  const strong = (p.strong_topics || []).map((w) => `<span class="chip good">${esc(w.topic)} ${w.avg_score.toFixed(1)}</span>`).join("");
-  $("memory").innerHTML = `<b>Panel memory</b> from ${p.sessions} past session${p.sessions > 1 ? "s" : ""} (Bruin pipeline):<br>${esc(p.focus || "")}
+  const strong = (p.strong_topics || [])
+    .map((w) => `<span class="chip good">${esc(w.topic)} ${w.avg_score.toFixed(1)}</span>`)
+    .join("");
+  $("memory").innerHTML =
+    `<b>Panel memory</b> from ${p.sessions} past session${p.sessions > 1 ? "s" : ""} (Bruin pipeline):<br>${esc(p.focus || "")}
     <div class="chips">${weak}${tags}${strong}</div>`;
 }
 function loadMemory() {
   const name = $("name").value.trim();
   localStorage.setItem("hotseat_name", name);
-  api(`/api/profile?name=${encodeURIComponent(name)}`).then(renderMemory).catch(() => renderMemory(null));
+  api(`/api/profile?name=${encodeURIComponent(name)}`)
+    .then(renderMemory)
+    .catch(() => renderMemory(null));
 }
 $("name").value = localStorage.getItem("hotseat_name") || "";
 $("name").addEventListener("change", loadMemory);
@@ -605,7 +700,11 @@ function runTests() {
 }
 
 function setLang(next) {
-  if (problem && codeEl.value.trim() !== starterFor(lang).trim() && !confirm("Switch language? Your current code will be replaced by the starter.")) {
+  if (
+    problem &&
+    codeEl.value.trim() !== starterFor(lang).trim() &&
+    !confirm("Switch language? Your current code will be replaced by the starter.")
+  ) {
     $("langSel").value = lang;
     return;
   }
@@ -639,7 +738,12 @@ $("runBtn").onclick = async () => {
   }
   const passed = r.results.filter((x) => x.pass).length;
   $("testSummary").textContent = `${passed}/${r.results.length} tests passed`;
-  $("testList").innerHTML = r.results.map((x, i) => `<span class="t ${x.pass ? "pass" : "fail"}" title="args ${esc(x.args)} → expected ${esc(x.expected)}, got ${esc(x.got)}">#${i + 1} ${x.pass ? "✓" : "✗"}</span>`).join("");
+  $("testList").innerHTML = r.results
+    .map(
+      (x, i) =>
+        `<span class="t ${x.pass ? "pass" : "fail"}" title="args ${esc(x.args)} → expected ${esc(x.expected)}, got ${esc(x.got)}">#${i + 1} ${x.pass ? "✓" : "✗"}</span>`,
+    )
+    .join("");
   setMood("tech", passed === r.results.length ? "impressed" : passed > r.results.length / 2 ? "neutral" : "concerned");
 };
 
@@ -648,7 +752,12 @@ $("submitCode").onclick = async () => {
   lastRun = r;
   const summary = r.compileError
     ? `Code did not run: ${r.compileError}`
-    : `${r.results.filter((x) => x.pass).length}/${r.results.length} hidden tests passed. Failures: ${r.results.filter((x) => !x.pass).map((x) => `args ${x.args} expected ${x.expected} got ${x.got}`).join("; ") || "none"}`;
+    : `${r.results.filter((x) => x.pass).length}/${r.results.length} hidden tests passed. Failures: ${
+        r.results
+          .filter((x) => !x.pass)
+          .map((x) => `args ${x.args} expected ${x.expected} got ${x.got}`)
+          .join("; ") || "none"
+      }`;
   const notes = answerBox.value.trim();
   answerBox.value = `[LIVE CODING: ${problem.title} · language: ${lang === "python" ? "Python" : "JavaScript"}]\n${codeEl.value}\n\n[JUDGE] ${summary}${notes ? `\n[CANDIDATE EXPLANATION] ${notes}` : ""}`;
   $("ide").classList.add("hidden");
@@ -735,7 +844,10 @@ $("sendBtn").onclick = async () => {
     const out = await api("/api/answer", { session_id: sessionId, answer, state: sessionState });
     sessionState = out.state || sessionState;
     if (out.done) {
-      addLedger({ ...out, decision: { ...out.decision, reason: "Interview complete. Panel moves to final deliberation." } }, out.index + 1);
+      addLedger(
+        { ...out, decision: { ...out.decision, reason: "Interview complete. Panel moves to final deliberation." } },
+        out.index + 1,
+      );
       await playDeliberation(out);
       await finish();
     } else {
@@ -769,16 +881,19 @@ async function finish() {
 
 function renderVerdict(v) {
   const label = { hire: "Hire", lean_hire: "Lean hire", lean_no_hire: "Lean no hire", no_hire: "No hire" }[v.verdict];
-  const votes = v.votes.map((x) => {
-    const p = PANEL[x.agent];
-    return `<div class="vote"><div style="color:#${p.color.toString(16)};font-weight:600">${p.name}</div><div class="v">${x.vote === "hire" ? "Hire" : "No hire"}</div>${esc(x.reason)}<q>${esc(x.evidence_quote)}</q></div>`;
-  }).join("");
+  const votes = v.votes
+    .map((x) => {
+      const p = PANEL[x.agent];
+      return `<div class="vote"><div style="color:#${p.color.toString(16)};font-weight:600">${p.name}</div><div class="v">${x.vote === "hire" ? "Hire" : "No hire"}</div>${esc(x.reason)}<q>${esc(x.evidence_quote)}</q></div>`;
+    })
+    .join("");
   const p = v.profile;
-  const bruin = v.bruin && v.bruin.ok
-    ? `<b>Memory updated by Bruin</b> in ${(v.bruin.ms / 1000).toFixed(1)}s · ${p ? p.sessions : "?"} sessions, ${p ? p.turns : "?"} answers on file.<br>Next time the panel will focus on: ${esc(p?.focus || "")}`
-    : v.hosted
-      ? `<b>Memory runs with Bruin on the full install.</b> This hosted demo doesn't keep sessions. Clone the repo and run it locally to see the panel remember you.`
-      : `<b>Bruin pipeline</b> did not run this time.`;
+  const bruin =
+    v.bruin && v.bruin.ok
+      ? `<b>Memory updated by Bruin</b> in ${(v.bruin.ms / 1000).toFixed(1)}s · ${p ? p.sessions : "?"} sessions, ${p ? p.turns : "?"} answers on file.<br>Next time the panel will focus on: ${esc(p?.focus || "")}`
+      : v.hosted
+        ? `<b>Memory runs with Bruin on the full install.</b> This hosted demo doesn't keep sessions. Clone the repo and run it locally to see the panel remember you.`
+        : `<b>Bruin pipeline</b> did not run this time.`;
   $("verdict").innerHTML = `
     <div class="tag" style="color:#8a7e70;font-size:12px;font-weight:600">PANEL VERDICT</div>
     <div class="vbig">${label} · ${Number(v.overall).toFixed(1)}/5</div>
@@ -786,6 +901,7 @@ function renderVerdict(v) {
     <div class="votes">${votes}</div>
     <div class="vsec"><h3>STRENGTHS</h3><ul>${v.strengths.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
     <div class="vsec"><h3>WORK ON</h3><ul>${v.growth.map((g) => `<li><b>${esc(g.area)}</b> <q>${esc(g.evidence_quote)}</q><br>Drill: ${esc(g.drill)}</li>`).join("")}</ul></div>
+    <div class="vsec"><h3>ENGINE CHECKS</h3><ul>${(v.checks || []).map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>
     <div class="bruinbox">${bruin}</div>
     <div style="margin-top:18px;display:flex;gap:10px"><button class="primary" onclick="location.reload()">Go again (the panel remembers)</button></div>`;
   $("verdict").classList.remove("hidden");

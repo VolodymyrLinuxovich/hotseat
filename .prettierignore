@@ -1,0 +1,9 @@
+dist
+node_modules
+data
+logs
+.tools
+.vercel
+*.md
+package-lock.json
+bruin
