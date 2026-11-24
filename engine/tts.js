@@ -10,7 +10,10 @@ const TTS_MODEL = "gpt-4o-mini-tts";
 // Questions are capped well below this, but the spoken verdict can run longer.
 const MAX_CHARS = 1500;
 
-const GEMINI_MODEL = "gemini-2.5-flash-preview-tts";
+// Every model in this chain offers the same prebuilt voices, so a fallback keeps each
+// interviewer sounding like themselves. OpenAI voices are different people, so OpenAI is
+// only used when no Gemini key is set at all.
+const GEMINI_MODELS = ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview", "gemini-2.5-pro-preview-tts"];
 
 export const VOICES = {
   manager: {
@@ -96,13 +99,16 @@ export async function synthesize(agent, text) {
   let lastError = null;
 
   if (process.env.GEMINI_API_KEY) {
-    try {
-      clip = await geminiSpeech(profile, input);
-    } catch (err) {
-      lastError = err;
+    for (const model of GEMINI_MODELS) {
+      try {
+        clip = await geminiSpeech(profile, input, model);
+        break;
+      } catch (err) {
+        lastError = err;
+      }
     }
   }
-  if (!clip && process.env.OPENAI_API_KEY) {
+  if (!clip && !process.env.GEMINI_API_KEY && process.env.OPENAI_API_KEY) {
     try {
       clip = await openaiSpeech(profile, input);
     } catch (err) {
@@ -128,9 +134,9 @@ async function openaiSpeech(profile, input) {
   return { audio: Buffer.from(await response.arrayBuffer()), type: "audio/mpeg" };
 }
 
-async function geminiSpeech(profile, input) {
+async function geminiSpeech(profile, input, model) {
   // This key type only works as a query parameter, not as a header.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
   const body = {
     contents: [{ parts: [{ text: `${profile.geminiStyle}: ${input}` }] }],
     generationConfig: {

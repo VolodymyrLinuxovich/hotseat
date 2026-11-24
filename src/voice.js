@@ -5,15 +5,19 @@
 // between speakers stays short. stopSpeaking() is the only way to cut someone off (barge in).
 // If the server can't make audio we fall back to the browser's speechSynthesis.
 
-// After a failed /api/tts call, skip the server for a while so every line doesn't pay
-// for another slow failure before falling back.
-const TTS_BACKOFF_MS = 60_000;
+// Each interviewer must keep one voice for the whole interview. A single failed clip is
+// retried instead of switching that line to a different browser voice. Only when the server
+// fails this many lines in a row do we give up on it, and then for the rest of the session,
+// so everyone switches together once instead of flickering between voices.
+const MAX_CONSECUTIVE_FAILURES = 3;
+const CLIP_ATTEMPTS = 2;
 
 // A clip that takes longer than this to arrive is not worth waiting for.
 const FETCH_TIMEOUT_MS = 15_000;
 
 let profiles = {};
-let ttsDownUntil = 0;
+let failuresInARow = 0;
+let serverVoicesOff = false;
 
 const queue = [];
 let current = null;
@@ -141,31 +145,55 @@ async function play(item) {
 }
 
 async function fetchClip(item) {
-  if (!item.text.trim() || Date.now() < ttsDownUntil) {
+  if (!item.text.trim() || serverVoicesOff) {
     return null;
   }
 
-  const timer = setTimeout(() => item.controller.abort(), FETCH_TIMEOUT_MS);
+  for (let attempt = 1; attempt <= CLIP_ATTEMPTS; attempt++) {
+    const blob = await requestClip(item);
+    if (blob) {
+      failuresInARow = 0;
+      return blob;
+    }
+    if (item.stopped) {
+      return null;
+    }
+  }
+
+  failuresInARow += 1;
+  if (failuresInARow >= MAX_CONSECUTIVE_FAILURES) {
+    serverVoicesOff = true;
+    console.warn("voice: server voices keep failing, using browser voices for the rest of the session");
+  }
+  return null;
+}
+
+async function requestClip(item) {
+  // Each attempt gets its own abort, so a timeout on the first try doesn't cancel the retry.
+  // A barge-in (the item's own abort) still cancels whichever attempt is running.
+  const attempt = new AbortController();
+  const cancel = () => attempt.abort();
+  item.controller.signal.addEventListener("abort", cancel);
+  const timer = setTimeout(cancel, FETCH_TIMEOUT_MS);
   try {
     const res = await fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agent: item.agentId, text: item.text }),
-      signal: item.controller.signal,
+      signal: attempt.signal,
     });
     if (!res.ok) {
       throw new Error(`tts ${res.status}`);
     }
     return await res.blob();
   } catch (err) {
-    // a barge-in abort says nothing about the server, so don't back off for it
     if (!item.stopped) {
-      ttsDownUntil = Date.now() + TTS_BACKOFF_MS;
-      console.warn("voice: server tts unavailable, using browser voices", err);
+      console.warn("voice: clip failed, retrying", err);
     }
     return null;
   } finally {
     clearTimeout(timer);
+    item.controller.signal.removeEventListener("abort", cancel);
   }
 }
 

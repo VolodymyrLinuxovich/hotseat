@@ -84,47 +84,40 @@ when impressed, Sol tilts their head when skeptical, and all three lean in to co
 ## Architecture at a Glance
 
 ```mermaid
-flowchart LR
-    subgraph BR["Browser"]
-        SC[3D room<br/>Three.js, door and exit scenes]
-        VO[Voice queue<br/>one speaker at a time]
-        LI[Speech input<br/>recorded, then transcribed]
-        CO[Coding round<br/>Pyodide and JS judge, talk-through]
-        GZ[Attention<br/>MediaPipe, stays in the browser]
-        LG[Panel ledger<br/>and score card]
+flowchart TB
+    classDef ui fill:#2a211a,stroke:#e8a33d,stroke-width:1.5px,color:#f3ece2
+    classDef eng fill:#17242d,stroke:#5fa8d3,stroke-width:1.5px,color:#f3ece2
+    classDef mem fill:#2a1b19,stroke:#d9634a,stroke-width:1.5px,color:#f3ece2
+
+    subgraph BROWSER["Browser"]
+        direction LR
+        ROOM["3D room<br/>Three.js"]:::ui
+        VOICE["Voices and speech<br/>Gemini"]:::ui
+        CODE["Coding round<br/>Pyodide judge"]:::ui
+        EYES["Attention<br/>MediaPipe"]:::ui
     end
 
-    subgraph EN["Engine (server)"]
-        PN[Panel turn<br/>score, whispers, bids, question]
-        CK[Checks<br/>repair every model output]
-        CR[Trained critic<br/>second opinion on each score]
-        CPP[C++ core in WebAssembly<br/>ability, confidence, quote alignment]
-        CC[Coding chat<br/>Theo, never writes code]
-        VD[Verdict<br/>votes with checked quotes]
-        TT[Voices and transcription<br/>Gemini]
+    subgraph ENGINE["Engine"]
+        direction LR
+        PANEL["Panel turn<br/>three agents bid"]:::eng --> CHECKS["Checks<br/>repair every output"]:::eng
+        CHECKS --> CRITIC["Trained critic<br/>second opinion"]:::eng
+        CHECKS --> CORE["C++ core<br/>ability, interval, quotes"]:::eng
     end
 
-    subgraph MEM["Memory"]
-        LOG[(turns.jsonl<br/>sessions.jsonl)]
-        BRU[Bruin pipeline<br/>DuckDB, 55 checks]
-        PRO[(profile per candidate<br/>fixed vs repeating)]
-        RT[Critic retrain<br/>scikit-learn]
+    subgraph MEMORY["Memory"]
+        direction LR
+        LOG[("Session log")]:::mem --> BRUIN["Bruin pipeline<br/>9 assets, 55 checks"]:::mem
+        BRUIN --> PROFILE[("Profile<br/>fixed vs repeating")]:::mem
+        BRUIN --> RETRAIN["Critic retrain<br/>scikit-learn"]:::mem
     end
 
-    LI --> TT
-    TT --> VO
-    CO --> CC
-    SC --> PN
-    GZ --> PN
-    PN --> CK
-    CK --> CR
-    CK --> CPP
-    CK --> LG
-    VD --> CPP
-    VD --> LOG
-    LOG --> BRU --> PRO
-    BRU --> RT --> CR
-    PRO --> PN
+    BROWSER <-- "answers in, questions and voices out" --> ENGINE
+    ENGINE -- "verdict" --> MEMORY
+    MEMORY -. "profile and new critic" .-> ENGINE
+
+    style BROWSER fill:#14110f,stroke:#e8a33d,color:#e8a33d
+    style ENGINE fill:#0f171c,stroke:#5fa8d3,color:#5fa8d3
+    style MEMORY fill:#170f0e,stroke:#d9634a,color:#d9634a
 ```
 
 ### One turn
