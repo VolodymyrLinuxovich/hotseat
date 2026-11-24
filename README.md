@@ -29,7 +29,7 @@ which habits you fixed and which ones you keep repeating.
 
 <br/>
 
-<img src="docs/hero.png" alt="Hotseat: the panel's start screen with Maya and Sol at the table and the candidate's Bruin memory card" width="760">
+<img src="docs/hero.png" alt="Hotseat start screen: name filled in, Amazon picked as the company, the Bruin memory card, and the character creator on the right" width="760">
 
 <br/>
 
@@ -51,6 +51,24 @@ which habits you fixed and which ones you keep repeating.
 | `bruin/` | The memory pipeline: 9 DuckDB assets, 57 quality checks |
 | `native/` | The C++ core and its WebAssembly build |
 | `train/` | The answer critic's trainer and data |
+
+---
+
+## See It Move
+
+[![The candidate walks down the hallway and opens the door. The panel looks up, Maya waves, and the candidate sits down.](docs/entrance.gif)](docs/entrance.mp4)
+
+You walk down the hallway and open the door. The panel looks up and Maya waves. [Full video (MP4)](docs/entrance.mp4).
+
+[![One turn: whispers appear above each head, bid meters fill, Sol takes the floor, a new ledger entry slides in, and Sol asks his question.](docs/deliberation.gif)](docs/deliberation.mp4)
+
+After each answer the panel whispers about you and bids for the floor. Sol bids highest, so he asks next. The ledger
+shows why. [Full video (MP4)](docs/deliberation.mp4).
+
+[![Maya reads the verdict, the candidate stands and walks out, and the frame freezes in the doorway with the score card: score ring, three votes, and the quotes they heard.](docs/exit.gif)](docs/exit.mp4)
+
+Maya reads the verdict and you walk out. The frame freezes on your score card. Every vote quotes your own words.
+[Full video (MP4)](docs/exit.mp4).
 
 ---
 
@@ -162,6 +180,9 @@ sequenceDiagram
 1. **Walk in.** Enter your name and the role, then the camera walks you down a hallway, through the door and into your
    seat while the panel looks up. If they've met you before, the start screen shows your Bruin memory: weakest topics,
    repeated habits, strongest topics. Your webcam appears as a small self view.
+
+   <img src="docs/creator.png" alt="The character creator: hair, outfit and extras tabs with a turntable preview" width="760">
+
 2. **Answer.** Click Speak and talk, or type. Your answer is recorded and transcribed accurately, with the browser's
    live text only as a preview. The panel stops talking the moment you start. While the engine thinks, the three
    avatars lean in and confer. Each interviewer speaks in their own voice, one at a time.
@@ -184,6 +205,9 @@ sequenceDiagram
      submit. A large paste shows a note in the editor, the panel sees a summary, and Theo asks you to walk him through
      the part you pasted.
    - If your function prints its answer or returns `None`, the judge says so instead of just failing the tests.
+
+   <img src="docs/coding.png" alt="The coding round: a Python problem with a pasted solution and the paste notice, 6 of 6 hidden tests passed, the talk-through chat with Theo, and the panel ledger" width="760">
+
 5. **Verdict.** Each interviewer votes hire or no hire with one reason and an **exact quote** from your answers.
    Maya says the verdict out loud, then you stand up and walk out, and the frame freezes on a score card: the verdict,
    the score with its 95% interval, three vote cards, and folding sections for strengths, what to work on (each with
