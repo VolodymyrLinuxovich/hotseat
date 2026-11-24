@@ -39,13 +39,28 @@ function allowStart(req) {
 const sessions = new Map();
 
 function getSession(body) {
-  let session = sessions.get(body.session_id);
-  if (!session && body.state && body.state.id === body.session_id) {
-    session = body.state;
-    session.turns = Array.isArray(session.turns) ? session.turns.slice(0, MAX_QUESTIONS) : [];
-    sessions.set(session.id, session);
+  // A request with no JSON body (or the wrong content type) has no body at all in Express 5.
+  if (!body || typeof body !== "object") {
+    return null;
   }
-  return session || null;
+  const cached = sessions.get(body.session_id);
+  const sent = body.state && body.state.id === body.session_id ? body.state : null;
+
+  // On Vercel a warm instance can hold an old copy of a session that another instance has moved
+  // on since. The browser always has the latest, so its copy wins whenever it is further along.
+  if (sent && (!cached || progress(sent) > progress(cached))) {
+    sent.turns = Array.isArray(sent.turns) ? sent.turns.slice(0, MAX_QUESTIONS) : [];
+    sessions.set(sent.id, sent);
+    return sent;
+  }
+  return cached || null;
+}
+
+// How far an interview has got: questions asked, plus one if the last one has been answered.
+function progress(session) {
+  const turns = Array.isArray(session.turns) ? session.turns : [];
+  const last = turns[turns.length - 1];
+  return turns.length * 2 + (last && last.answer ? 1 : 0);
 }
 
 function fail(res, err) {
@@ -108,6 +123,13 @@ app.post("/api/answer", async (req, res) => {
     return;
   }
 
+  // Already answered (a double submit, or the interview is over): nothing is waiting for an answer.
+  const last = session.turns[session.turns.length - 1];
+  if (!last || last.answer) {
+    res.status(409).json({ error: "no question is waiting for an answer" });
+    return;
+  }
+
   try {
     const turn = await answerQuestion(session, req.body.answer, req.body.coding, req.body.attention);
     res.json({ ...turn, state: session });
@@ -158,7 +180,8 @@ app.post("/api/verdict", async (req, res) => {
 // Spoken lines for the panel. A 503 tells the browser to fall back to its own voices.
 app.post("/api/tts", async (req, res) => {
   const { agent, text } = req.body || {};
-  if (!VOICES[agent] || typeof text !== "string" || !text.trim()) {
+  // hasOwn, so "constructor" or "__proto__" from a crafted request is not taken for a voice
+  if (!Object.hasOwn(VOICES, String(agent)) || typeof text !== "string" || !text.trim()) {
     res.status(400).json({ error: "agent and text are required" });
     return;
   }
@@ -174,30 +197,48 @@ app.post("/api/tts", async (req, res) => {
   }
 });
 
-// The candidate's recorded answer, sent as the raw audio body (audio/webm from Chrome).
+// The candidate's recorded answer, sent as the raw audio body (audio/webm from Chrome, audio/mp4
+// from Safari).
 // A 503 tells the browser to keep its own live transcript instead.
-app.post("/api/stt", express.raw({ type: "audio/*", limit: MAX_AUDIO_BYTES }), async (req, res) => {
-  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
-    res.status(400).json({ error: "send the recording as an audio/* body" });
-    return;
-  }
-  if (!sttAvailable()) {
-    res.status(503).json({ error: "stt unavailable" });
-    return;
-  }
+app.post(
+  "/api/stt",
+  express.raw({ type: ["audio/*", "video/webm", "video/mp4"], limit: MAX_AUDIO_BYTES }),
+  async (req, res) => {
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: "send the recording as an audio/* body" });
+      return;
+    }
+    if (!sttAvailable()) {
+      res.status(503).json({ error: "stt unavailable" });
+      return;
+    }
 
-  try {
-    const text = await transcribe(req.body, req.headers["content-type"]);
-    res.json({ text });
-  } catch (err) {
-    console.error("stt failed:", err.message || err);
-    res.status(503).json({ error: "stt unavailable" });
-  }
-});
+    try {
+      const text = await transcribe(req.body, req.headers["content-type"]);
+      res.json({ text });
+    } catch (err) {
+      console.error("stt failed:", err.message || err);
+      res.status(503).json({ error: "stt unavailable" });
+    }
+  },
+);
 
 app.get("/api/bruin/run", async (req, res) => {
   const result = await runBruin();
   res.json({ ...result, profile: readProfile(candidateId(req.query.name)) });
+});
+
+// Bad JSON and oversized bodies come back as JSON, so the browser can show the message.
+app.use((err, req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  const status = err.status || err.statusCode || 500;
+  if (status >= 500) {
+    console.error(err);
+  }
+  res.status(status).json({ error: status >= 500 ? "server error" : String(err.message || err) });
 });
 
 export default app;

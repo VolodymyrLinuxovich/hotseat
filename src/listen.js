@@ -153,7 +153,15 @@ async function transcribe(blob) {
 // ---------- recorder ----------
 
 function pickMimeType() {
-  const options = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", "audio/webm"];
+  // Chrome and Firefox record webm or ogg opus. Safari records mp4 (AAC); newer Safari also
+  // offers webm, which is fine too. engine/stt.js strips the codec part before Gemini sees it.
+  const options = [
+    "audio/webm;codecs=opus",
+    "audio/ogg;codecs=opus",
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4",
+    "audio/webm",
+  ];
   return options.find((t) => MediaRecorder.isTypeSupported(t)) || "";
 }
 
@@ -163,6 +171,8 @@ async function startRecorder(s) {
   });
 
   const mimeType = pickMimeType();
+  // Kept for the blob type, since some Safari versions leave recorder.mimeType empty.
+  s.mimeType = mimeType;
   const options = { audioBitsPerSecond: BITRATE };
   if (mimeType) {
     options.mimeType = mimeType;
@@ -188,7 +198,7 @@ function stopRecorder(s) {
 
   return new Promise((resolve) => {
     recorder.onstop = () => {
-      resolve(new Blob(s.chunks, { type: recorder.mimeType || "audio/webm" }));
+      resolve(new Blob(s.chunks, { type: recorder.mimeType || s.mimeType || "audio/webm" }));
     };
     recorder.stop();
   });
@@ -203,6 +213,11 @@ function startMeter(s) {
   }
 
   s.audioCtx = new Ctx();
+  // Safari can create the context suspended once the click's gesture has been spent on the
+  // permission prompt, and a suspended analyser reads silence, so auto stop would never fire.
+  if (s.audioCtx.state === "suspended") {
+    s.audioCtx.resume().catch(() => {});
+  }
   const source = s.audioCtx.createMediaStreamSource(s.stream);
   const analyser = s.audioCtx.createAnalyser();
   analyser.fftSize = 1024;
@@ -341,7 +356,11 @@ function finish(s) {
 // Wires a Speak/Stop button to a textarea. Text typed before Speak is kept and the transcript
 // goes after it. Returns startRec/stopRec for older callers: stopRec drops the recording and
 // keeps the preview, which is what sending mid sentence should do.
-export function bindMicButton(button, box, { idleLabel = "🎙 Speak", stopLabel = "■ Stop" } = {}) {
+export function bindMicButton(
+  button,
+  box,
+  { idleLabel = "🎙 Speak", stopLabel = "■ Stop", busyLabel = "Transcribing…" } = {},
+) {
   let base = "";
   let state = "idle";
 
@@ -362,7 +381,7 @@ export function bindMicButton(button, box, { idleLabel = "🎙 Speak", stopLabel
     if (next === "recording") {
       button.textContent = stopLabel;
     } else if (next === "transcribing") {
-      button.textContent = "Transcribing…";
+      button.textContent = busyLabel;
     } else {
       button.textContent = idleLabel;
     }

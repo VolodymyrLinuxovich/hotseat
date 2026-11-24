@@ -1,6 +1,8 @@
 // The live coding round: the editor, the in-browser judge, the integrity counters, and the
 // side chat where the candidate talks to Theo while they code.
 
+import { bindMicButton } from "./listen.js";
+
 // One paste longer than this gets a visible note. Keep in step with LARGE_PASTE_CHARS in engine/checks.js.
 const LARGE_PASTE_CHARS = 80;
 const PASTE_SAMPLE_CHARS = 160;
@@ -65,6 +67,10 @@ export function createCodingRound({
   let submitting = false;
   let chatting = false;
   let stats = freshStats();
+
+  // Bumped on every submit and every new problem. A chat reply that comes back after either
+  // belongs to a round that is over, so it must not speak or overwrite the session state.
+  let chatRound = 0;
 
   let lang = localStorage.getItem("hotseat_lang") || "python";
   let pyWorker = null;
@@ -428,7 +434,9 @@ export function createCodingRound({
       return;
     }
     submitting = true;
+    chatRound++;
     stopDictation();
+    const submitted = problem;
 
     const r = await runTests();
     lastRun = r;
@@ -445,7 +453,10 @@ export function createCodingRound({
     submitting = false;
 
     if (result.ok) {
-      problem = null;
+      // The panel's reply may already have opened the next coding problem; keep that one.
+      if (problem === submitted) {
+        problem = null;
+      }
       return;
     }
 
@@ -480,6 +491,7 @@ export function createCodingRound({
     }
     stopDictation();
     chatting = true;
+    const round = chatRound;
     $("chatSend").disabled = true;
 
     addChatLine("candidate", message);
@@ -495,6 +507,10 @@ export function createCodingRound({
         code: codeEl.value,
         context: { seconds: secondsOpen(), last_run: runSummary(lastRun) },
       });
+      if (round !== chatRound) {
+        pending.remove();
+        return;
+      }
       setSessionState(out.state);
       pending.remove();
       addChatLine("tech", out.reply);
@@ -527,62 +543,14 @@ export function createCodingRound({
 
   // ---------- dictation into the chat ----------
 
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null;
-  let dictating = false;
-  const chatMic = $("chatMic");
+  // The same recorder as the main answer box: the browser's guess shows while the candidate
+  // talks, then the server's transcript replaces it. Starting it also cuts Theo off.
+  const chatMic = bindMicButton($("chatMic"), chatBox, { idleLabel: "🎙", stopLabel: "■", busyLabel: "…" });
 
-  if (!SR) {
-    chatMic.disabled = true;
-    chatMic.title = "Speech recognition needs Chrome";
-  }
-
-  function startDictation() {
-    if (!SR || dictating) {
-      return;
-    }
-
-    // stop Theo first so the mic hears the candidate, not him
-    stopSpeaking();
-    rec = new SR();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = "en-US";
-    const base = chatBox.value ? `${chatBox.value} ` : "";
-
-    rec.onresult = (e) => {
-      let heard = "";
-      for (let i = 0; i < e.results.length; i++) {
-        heard += e.results[i][0].transcript;
-      }
-      chatBox.value = base + heard;
-    };
-    rec.onend = () => {
-      dictating = false;
-      chatMic.classList.remove("rec");
-      chatMic.textContent = "🎙";
-    };
-
-    rec.start();
-    dictating = true;
-    chatMic.classList.add("rec");
-    chatMic.textContent = "■";
-  }
-
+  // Sending or submitting mid sentence keeps what the preview heard and drops the recording.
   function stopDictation() {
-    if (rec && dictating) {
-      rec.onresult = null;
-      rec.stop();
-    }
+    chatMic.stopRec();
   }
-
-  chatMic.onclick = () => {
-    if (dictating) {
-      stopDictation();
-      return;
-    }
-    startDictation();
-  };
 
   // ---------- open ----------
 
@@ -590,6 +558,7 @@ export function createCodingRound({
     problem = p;
     lastRun = null;
     submitting = false;
+    chatRound++;
     stats = freshStats();
 
     $("pTitle").textContent = p.title;

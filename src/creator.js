@@ -98,11 +98,14 @@ export function initCreator() {
   const preview = createPreview(root.querySelector(".cstage canvas"));
   preview.show(character);
 
-  function update(change) {
+  // redraw=false keeps the panel's elements in place, for the color input while its picker is open.
+  function update(change, redraw = true) {
     character = normalizeCharacter({ ...character, ...change });
     save(nameInput ? nameInput.value : "", character);
     preview.show(character);
-    renderPanel();
+    if (redraw) {
+      renderPanel();
+    }
   }
 
   function renderTabs() {
@@ -178,10 +181,19 @@ export function initCreator() {
     update({ [key]: isColor ? Number(b.dataset.value) : b.dataset.value });
   });
 
+  // Redrawing on every input would replace the color input under the open picker, and the
+  // picker's later moves would land on a detached element. So input only recolors the swatch,
+  // and the panel redraws once the picker closes (change).
   panelEl.addEventListener("input", (e) => {
     const input = e.target.closest('input[type="color"]');
     if (input) {
-      update({ [input.dataset.key]: parseInt(input.value.slice(1), 16) });
+      update({ [input.dataset.key]: parseInt(input.value.slice(1), 16) }, false);
+      input.closest("label").style.setProperty("--c", input.value);
+    }
+  });
+  panelEl.addEventListener("change", (e) => {
+    if (e.target.closest('input[type="color"]')) {
+      renderPanel();
     }
   });
 

@@ -9,8 +9,9 @@
     "build:native": "bash native/build.sh",
     "test": "node --test tests/",
     "format": "prettier --write .",
-    "check": "prettier --check . && node --test tests/",
-    "research:companies": "env -u ANTHROPIC_API_KEY node --env-file=.env scripts/research-companies.js"
+    "check": "prettier --check . && npm run lint && node --test tests/",
+    "research:companies": "env -u ANTHROPIC_API_KEY node --env-file=.env scripts/research-companies.js",
+    "lint": "eslint src engine server.js api scripts tests eslint.config.js"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +25,10 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "concurrently": "^9.2.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
     "prettier": "^3.10.1",
     "vite": "^8.3.8"
   },

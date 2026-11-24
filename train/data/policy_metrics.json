@@ -403,17 +403,17 @@
   "asker_skeptic": -0.0801
  },
  "last_quick": {
-  "at": "2026-11-24T00:26:25+00:00",
-  "seconds": 1.22,
+  "at": "2026-11-24T01:56:22+00:00",
+  "seconds": 1.18,
   "sim_episodes": 1500,
   "real_sessions": {
    "sessions": 5,
    "turns": 25,
    "turns_with_difficulty": 0,
    "transitions": 23,
-   "td_rmse_before": 0.2014,
-   "td_rmse_after": 0.1425,
-   "weight_change": 0.0558
+   "td_rmse_before": 0.1979,
+   "td_rmse_after": 0.1404,
+   "weight_change": 0.0548
   }
  }
 }

@@ -736,6 +736,14 @@ body.frozen::after {
   background: #d9634a;
   border-color: #d9634a;
   color: #fff;
+  box-shadow: 0 0 0 calc(var(--level, 0) * 8px) rgba(217, 99, 74, 0.35);
+  transition: box-shadow 0.08s linear;
+}
+#chatMic.transcribing {
+  animation: pulse 1.2s infinite;
+}
+#chatBox.previewing {
+  color: #8a7e70;
 }
 
 #testList {

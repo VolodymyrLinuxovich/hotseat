@@ -84,7 +84,7 @@ test("a remembered weak topic is worth more to ask about", () => {
   const model = loadPolicy();
   const conflictValue = (weak) => {
     const { values } = rankActions(model, buildState(model, [], weak));
-    const asked = model.askers.flatMap((a) => model.free_topics.flatMap((t) => model.bands.map(() => t)));
+    const asked = model.askers.flatMap(() => model.free_topics.flatMap((t) => model.bands.map(() => t)));
     return Math.max(...values.filter((_, i) => asked[i] === "conflict"));
   };
   assert.ok(conflictValue(["conflict"]) > conflictValue([]));

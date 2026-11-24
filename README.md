@@ -437,7 +437,7 @@ for the next session moved from metrics to ownership, because that is where the 
 npm install
 cp .env.example .env        # ANTHROPIC_API_KEY, plus GEMINI_API_KEY for voices and transcription
 npm run dev                 # API on :8787, app on http://localhost:5173
-npm run check               # formatting and 57 unit tests
+npm run check               # formatting, lint and 73 unit tests
 ```
 
 - **Bruin:** put the `bruin` binary in `.tools/bruin`, on your PATH, or set `BRUIN_BIN`. Run the pipeline by hand

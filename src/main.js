@@ -68,11 +68,13 @@ const creator = initCreator();
 // voice.js owns the audio and plays one line at a time; this wrapper drives the avatars.
 voice.configureVoices(PANEL);
 
-function speak(id, text) {
+async function speak(id, text) {
   const a = avatars[id];
-  return voice.speak(id, text, {
+  let started = false;
+  await voice.speak(id, text, {
     // runs when this line actually starts, not when it was queued, so captions match the audio
     onStart: () => {
+      started = true;
       showCaption(id, text);
       focusOn(id);
       allLookAt(id);
@@ -86,6 +88,12 @@ function speak(id, text) {
       focusOn(null);
     },
   });
+
+  // A line can be skipped before it starts: the candidate barged in while the clip was still
+  // loading, or the tab was hidden. The question must still be on screen, or they never get it.
+  if (!started) {
+    showCaption(id, text);
+  }
 }
 
 // ---------- speech input ----------
@@ -289,7 +297,6 @@ initCompanyPicker();
 // ---------- flow ----------
 let sessionId = null;
 let sessionState = null;
-let hosted = false;
 let busy = false;
 
 // ---------- coding round ----------
@@ -363,7 +370,6 @@ $("startBtn").onclick = async () => {
     const out = await started;
     sessionId = out.session_id;
     sessionState = out.state;
-    hosted = Boolean(out.hosted);
     await handleTurn(out);
   } catch (e) {
     conferring = false;

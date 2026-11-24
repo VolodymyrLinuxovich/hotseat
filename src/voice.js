@@ -15,6 +15,10 @@ const CLIP_ATTEMPTS = 2;
 // A clip that takes longer than this to arrive is not worth waiting for.
 const FETCH_TIMEOUT_MS = 15_000;
 
+// Upper bound for a clip whose length the browser can't tell us, and the slack after a known one.
+const MAX_CLIP_SECONDS = 60;
+const CLIP_GRACE_SECONDS = 3;
+
 let profiles = {};
 let failuresInARow = 0;
 let serverVoicesOff = false;
@@ -202,12 +206,14 @@ function playBlob(item, blob) {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(blob);
     let settled = false;
+    let watchdog = null;
 
     const finish = (ok) => {
       if (settled) {
         return;
       }
       settled = true;
+      clearTimeout(watchdog);
       audio.onended = null;
       audio.onerror = null;
       item.halt = null;
@@ -223,10 +229,18 @@ function playBlob(item, blob) {
     audio.onerror = () => finish(false);
 
     audio.src = url;
-    audio.play().catch((err) => {
-      console.warn("voice: audio playback blocked", err);
-      finish(false);
-    });
+    audio
+      .play()
+      .then(() => {
+        // A stalled clip never fires ended, and the whole interview waits on this line. Give it
+        // its own length plus a few seconds, then move on as if it had finished.
+        const seconds = Number.isFinite(audio.duration) ? audio.duration : MAX_CLIP_SECONDS;
+        watchdog = setTimeout(() => finish(true), (seconds + CLIP_GRACE_SECONDS) * 1000);
+      })
+      .catch((err) => {
+        console.warn("voice: audio playback blocked", err);
+        finish(false);
+      });
   });
 }
 

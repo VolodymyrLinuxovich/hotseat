@@ -372,7 +372,7 @@ function cushionGeometry(w, h, depth, radius, curve) {
   return geo;
 }
 
-export function buildOutfit(body, look, { cloth, lapelMat, shirtMat }) {
+export function buildOutfit(body, look, { lapelMat, shirtMat }) {
   if (look.outfit === "sweater") {
     // crew-neck sweater with a ribbed collar and a white tee peeking out
     const collar = shadowed(new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.03, 12, 32), lapelMat));

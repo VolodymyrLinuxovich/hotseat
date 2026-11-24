@@ -35,6 +35,7 @@ let landmarker = null;
 let video = null;
 let ownStream = null;
 let running = false;
+let tickTimer = null;
 let state = "idle"; // idle | starting | on | off
 let offReason = "";
 
@@ -319,15 +320,23 @@ function tick() {
     }
   }
 
-  setTimeout(tick, FRAME_MS);
+  tickTimer = setTimeout(tick, FRAME_MS);
 }
 
 // ---------- public API ----------
 
 // Starts tracking. Safe to call more than once; resolves to true when tracking is on.
 export async function startGaze() {
-  if (state === "starting" || state === "on") {
-    return state === "on";
+  if (state === "starting") {
+    return false;
+  }
+
+  // "Come back in" after stopGaze: the model and camera are still loaded, only the loop stopped.
+  if (state === "on") {
+    if (!running) {
+      resume();
+    }
+    return true;
   }
   state = "starting";
 
@@ -345,11 +354,15 @@ export async function startGaze() {
   }
 
   state = "on";
+  resume();
+  return true;
+}
+
+function resume() {
   running = true;
   lastFrameAt = 0;
   setDot("attention: on", true);
   tick();
-  return true;
 }
 
 export function gazeStatus() {
@@ -385,12 +398,21 @@ export function questionSummary() {
 
 export function stopGaze() {
   running = false;
+  clearTimeout(tickTimer);
+  tickTimer = null;
   closeStreak();
   if (ownStream) {
     for (const track of ownStream.getTracks()) {
       track.stop();
     }
     ownStream = null;
+
+    // Our own camera is off now, so the next startGaze has to open it again from scratch.
+    if (video) {
+      video.remove();
+      video = null;
+    }
+    state = "idle";
   }
   if (dot) {
     dot.classList.add("hidden");

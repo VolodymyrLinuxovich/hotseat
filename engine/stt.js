@@ -52,10 +52,13 @@ export function normalizeMime(type) {
     .split(";")[0]
     .trim()
     .toLowerCase();
-  if (!ACCEPTED.includes(base)) {
+  // A recorder given no type can label an audio-only clip as video (Chrome says video/webm,
+  // Safari video/mp4). The container is the same, so Gemini gets the audio type.
+  const audio = base.replace(/^video\/(webm|mp4|ogg)$/, "audio/$1");
+  if (!ACCEPTED.includes(audio)) {
     return null;
   }
-  return base === "audio/x-wav" ? "audio/wav" : base;
+  return audio === "audio/x-wav" ? "audio/wav" : audio;
 }
 
 export async function transcribe(audio, type) {
