@@ -150,3 +150,30 @@
   margin-top: 6px;
   color: #b9ad9f;
 }
+
+/* Keep the picker short so "Take the seat" stays on screen on laptop heights:
+   two columns, name plus one value, the tagline only on hover. */
+.cgrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ccard {
+  padding: 9px 12px;
+  min-width: 0;
+}
+
+.ctag {
+  display: none;
+}
+
+.cchip:nth-child(n + 2) {
+  display: none;
+}
+
+.cchip {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

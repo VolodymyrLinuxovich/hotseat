@@ -1228,3 +1228,16 @@ body.frozen::after {
     height: 320px;
   }
 }
+
+/* The start card scrolls inside the window instead of pushing the start button off screen. */
+#intro {
+  overflow-y: auto;
+}
+
+/* Always reachable, even when the card scrolls. */
+#startBtn {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 -12px 24px rgba(20, 17, 15, 0.9);
+}
