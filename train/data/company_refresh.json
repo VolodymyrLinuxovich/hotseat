@@ -1,0 +1,181 @@
+{
+  "ran_at": "2026-11-24T00:31:00.521Z",
+  "via": "apify",
+  "companies": [
+    {
+      "id": "google",
+      "pages": [
+        "https://www.google.com/about/careers/applications/how-we-hire/",
+        "https://www.google.com/about/careers/applications/interview-tips/"
+      ],
+      "values_confirmed": [],
+      "values_not_on_pages": [
+        "General Cognitive Ability",
+        "Role-Related Knowledge",
+        "Leadership",
+        "Googleyness"
+      ],
+      "values_renamed": [],
+      "candidates_not_in_profile": [],
+      "sources_added": [
+        {
+          "title": "Interviewing at Google: Best practices, advice, and tips - Google Careers",
+          "url": "https://www.google.com/about/careers/applications/interview-tips/"
+        }
+      ],
+      "file_changed": true
+    },
+    {
+      "id": "amazon",
+      "pages": [
+        "https://atoz.amazon/en-us/discover/leadership-principles",
+        "https://atoz.amazon/en-us/jobs/hiring-process",
+        "https://www.amazon.jobs/content/en/how-we-hire/interview-loop",
+        "https://atoz.amazon/en-us/jobs/hiring-process/online-assessment/university/software-development-engineer",
+        "https://atoz.amazon/en-us/jobs/hiring-process/interview-prep/software-development-engineer-ii",
+        "https://atoz.amazon/en-us/discover/culture/together-at-amazon"
+      ],
+      "values_confirmed": [
+        {
+          "value": "Customer Obsession",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Ownership",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Dive Deep",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Bias for Action",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Learn and Be Curious",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Deliver Results",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Earn Trust",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        },
+        {
+          "value": "Invent and Simplify",
+          "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+        }
+      ],
+      "values_not_on_pages": [],
+      "values_renamed": [],
+      "candidates_not_in_profile": [
+        "Are Right, A Lot",
+        "Hire and Develop the Best",
+        "Insist on the Highest Standards",
+        "Think Big",
+        "Frugality",
+        "Have Backbone; Disagree and Commit",
+        "Strive to be Earth’s Best Employer",
+        "Success and Scale Bring Broad Responsibility"
+      ],
+      "sources_added": [
+        {
+          "title": "Interview Loop",
+          "url": "https://www.amazon.jobs/content/en/how-we-hire/interview-loop"
+        },
+        {
+          "title": "Together at Amazon - Discover - A to Z",
+          "url": "https://atoz.amazon/en-us/discover/culture/together-at-amazon"
+        }
+      ],
+      "file_changed": true
+    },
+    {
+      "id": "meta",
+      "pages": [
+        "https://www.metacareers.com/blog/preparing-for-your-software-engineering-interview-at-meta/",
+        "https://www.metacareers.com/blog/acing-your-software-engineering-internship-interview-at-meta/",
+        "https://www.metacareers.com/facebook-life/"
+      ],
+      "values_confirmed": [
+        {
+          "value": "Move fast",
+          "url": "https://www.metacareers.com/facebook-life/"
+        },
+        {
+          "value": "Build awesome things",
+          "url": "https://www.metacareers.com/facebook-life/"
+        },
+        {
+          "value": "Be direct and respect your colleagues",
+          "url": "https://www.metacareers.com/facebook-life/"
+        },
+        {
+          "value": "Focus on long-term impact",
+          "url": "https://www.metacareers.com/facebook-life/"
+        },
+        {
+          "value": "Live in the future",
+          "url": "https://www.metacareers.com/facebook-life/"
+        },
+        {
+          "value": "Meta, Metamates, me",
+          "url": "https://www.metacareers.com/facebook-life/"
+        }
+      ],
+      "values_not_on_pages": [],
+      "values_renamed": [],
+      "candidates_not_in_profile": [
+        "IN THEIR OWN WORDS",
+        "Give people a voice",
+        "Build connection and community",
+        "Serve everyone",
+        "Keep people safe and protect privacy",
+        "Promote economic opportunity"
+      ],
+      "sources_added": [],
+      "file_changed": false
+    },
+    {
+      "id": "stripe",
+      "pages": [
+        "https://stripe.com/careers/compatibility"
+      ],
+      "values_confirmed": [],
+      "values_not_on_pages": [
+        "Users first",
+        "Create with craft and beauty",
+        "Move with urgency and focus",
+        "Collaborate egolessly",
+        "Stay curious",
+        "Obsess over talent"
+      ],
+      "values_renamed": [],
+      "candidates_not_in_profile": [],
+      "sources_added": [],
+      "file_changed": false
+    },
+    {
+      "id": "ramp",
+      "pages": [
+        "https://ramp.com/careers",
+        "https://ramp.com/emerging-talent"
+      ],
+      "values_confirmed": [],
+      "values_not_on_pages": [
+        "We only hire builders",
+        "If it doesn't save you time or money, we don't build it",
+        "'Hands off' doesn't exist at Ramp",
+        "We're a proud meritocracy",
+        "Working at Ramp is a bet on yourself"
+      ],
+      "values_renamed": [],
+      "candidates_not_in_profile": [],
+      "sources_added": [],
+      "file_changed": false
+    }
+  ]
+}

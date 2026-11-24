@@ -39,10 +39,13 @@ export function logSession(session, answered, verdict) {
     return JSON.stringify({
       candidate_id: session.candidate,
       session_id: session.id,
+      company: session.company || "general",
       ts: now,
       turn: i + 1,
       asker: t.asker,
       topic: t.topic || "general",
+      // The question policy learns from logged sessions and needs the difficulty each was asked at.
+      difficulty: t.difficulty ?? null,
       question: t.question,
       answer: t.answer,
       score: t.score ?? 3,
@@ -56,6 +59,7 @@ export function logSession(session, answered, verdict) {
   const sessionLine = {
     candidate_id: session.candidate,
     session_id: session.id,
+    company: session.company || "general",
     ts: now,
     verdict: verdict.verdict,
     overall: verdict.overall,

@@ -1,6 +1,8 @@
 import { initScene } from "./scene.js";
 
 import { createCodingRound } from "./coding.js";
+import { initCreator } from "./creator.js";
+import { initCompanyPicker, selectedCompany, showCompanyInHud, valuesHtml } from "./company.js";
 import { beginQuestion, questionSummary, startGaze, stopGaze } from "./gaze.js";
 import { bindMicButton } from "./listen.js";
 import * as voice from "./voice.js";
@@ -53,11 +55,14 @@ const sceneHooks = {
   isConferring: () => conferring,
   whisperer: () => whisperer,
 };
-const { avatars, setMood, lookAt, allLookAt, focusOn, playIntro, playExit, startWebcam } = initScene(
+const { avatars, setMood, lookAt, allLookAt, focusOn, playIntro, playExit, startWebcam, setCandidate } = initScene(
   PANEL,
   MOOD_LABEL,
   sceneHooks,
 );
+
+// the candidate's own avatar, designed on the start card; it walks in and out of the room
+const creator = initCreator();
 
 // ---------- voice ----------
 // voice.js owns the audio and plays one line at a time; this wrapper drives the avatars.
@@ -147,6 +152,11 @@ function addLedger(out, qIndex) {
   for (const d of out.deliberation) {
     const p = PANEL[d.agent];
     html += `<div class="line"><span class="who" style="color:#${p.color.toString(16)}">${p.name}</span><span>${esc(d.says)}</span><span class="bid">bid ${d.bid.toFixed(2)}</span></div>`;
+  }
+  // The trained policy's pick for this question, shown quietly next to the panel's choice.
+  if (out.policy) {
+    const band = out.policy.band === "mid" ? "medium" : out.policy.band;
+    html += `<div class="ledger-attn">Policy: ${esc(out.policy.name)} · ${esc(out.policy.topic.replace(/_/g, " "))} · ${esc(band)}</div>`;
   }
   const asker = PANEL[out.decision.asker];
   if (out.checks && out.checks.length) {
@@ -273,6 +283,8 @@ function loadMemory() {
 $("name").value = localStorage.getItem("hotseat_name") || "";
 $("name").addEventListener("change", loadMemory);
 loadMemory();
+// The company picker fills in once the list arrives; until then the saved choice stands.
+initCompanyPicker();
 
 // ---------- flow ----------
 let sessionId = null;
@@ -327,8 +339,15 @@ $("startBtn").onclick = async () => {
 
   // walk in through the door while the panel prepares its opening question
   $("intro").classList.add("hidden");
+  // "Come back in" lands here too, so the same character walks back in
+  setCandidate(creator.character());
   const walkIn = playIntro();
-  const started = api("/api/start", { role: $("role").value, name: $("name").value.trim() });
+  const started = api("/api/start", {
+    role: $("role").value,
+    name: $("name").value.trim(),
+    company: selectedCompany(),
+  });
+  showCompanyInHud($("role").value);
   // the error is handled below once the walk-in ends; this only stops an early unhandled-rejection warning
   started.catch(() => {});
   try {
@@ -611,13 +630,14 @@ function renderVerdict(v) {
     <div class="vhead">
       ${scoreRing(overall, color)}
       <div>
-        <div class="tag">Panel verdict</div>
+        <div class="tag">Panel verdict${v.company && v.company.id !== "general" ? ` · ${esc(v.company.name)}` : ""}</div>
         <div class="vbig" style="color:${color}">${label}</div>
         <div class="vscore">${overall.toFixed(1)} / 5 overall${v.score_ci ? ` · 95% CI ${v.score_ci.low.toFixed(1)}-${v.score_ci.high.toFixed(1)}` : ""}</div>
       </div>
     </div>
     <p class="vsummary">${esc(v.summary)}</p>
     <div class="vcards">${votes}</div>
+    ${verdictSection(v.company && v.company.id !== "general" ? `${esc(v.company.name)} values` : "Values", (v.values || []).length, valuesHtml(v.values))}
     ${verdictSection("Strengths", (v.strengths || []).length, strengths && `<ul>${strengths}</ul>`)}
     ${verdictSection("Work on", (v.growth || []).length, growth && `<ul>${growth}</ul>`)}
     ${verdictSection("What they heard", 0, quotes && `<ul class="quotes">${quotes}</ul>`)}

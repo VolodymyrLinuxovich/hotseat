@@ -16,21 +16,51 @@
     <div id="labels"></div>
 
     <section id="intro" class="card center">
-      <h1>Hotseat</h1>
-      <p class="lede">
-        Three interviewers. They talk to each other about you, decide who asks next, and remember how you did last time.
-      </p>
-      <label>
-        Your name (the panel remembers you by it)
-        <input id="name" placeholder="e.g. Vova" />
-      </label>
-      <label>
-        Role you're interviewing for
-        <input id="role" value="Software Engineer Intern" />
-      </label>
-      <div id="memory" class="memory"></div>
-      <button id="startBtn" class="primary">Take the seat</button>
-      <p class="hint">Chrome works best. Allow the microphone, or type your answers.</p>
+      <div class="introgrid">
+        <div class="introform">
+          <h1>Hotseat</h1>
+          <p class="lede">
+            Three interviewers. They talk to each other about you, decide who asks next, and remember how you did last
+            time.
+          </p>
+          <label>
+            Your name (the panel remembers you by it)
+            <input id="name" placeholder="e.g. Vova" />
+          </label>
+          <label>
+            Role you're interviewing for
+            <input id="role" value="Software Engineer Intern" />
+          </label>
+          <!-- company picker: src/company.js renders into this slot -->
+          <div id="companySlot"></div>
+          <div id="memory" class="memory"></div>
+          <button id="startBtn" class="primary">Take the seat</button>
+          <p class="hint">Chrome works best. Allow the microphone, or type your answers.</p>
+        </div>
+
+        <div id="creator" class="creator">
+          <div class="chead">
+            <div>
+              <h2>Create your character</h2>
+              <p class="csub">This is you walking into the room.</p>
+            </div>
+            <div class="cactions">
+              <button type="button" id="charRandom">Randomize</button>
+              <button type="button" id="charReset">Reset</button>
+            </div>
+          </div>
+          <div class="cbody">
+            <div class="cstage">
+              <canvas id="charPreview" aria-label="Your character, drag to turn"></canvas>
+              <div class="cstagehint">Drag to turn · double click to zoom</div>
+            </div>
+            <div class="ccontrols">
+              <div class="ctabs" role="tablist"></div>
+              <div class="cpanel"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <header id="hud" class="hidden">

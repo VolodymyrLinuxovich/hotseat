@@ -1,0 +1,25 @@
+{
+  "actorSpecification": 1,
+  "name": "hotseat-company-research",
+  "title": "Hotseat company research",
+  "description": "Collects how a company says it hires: interview process pages, values and leadership principles, from its official careers site.",
+  "version": "0.1",
+  "input": "./INPUT_SCHEMA.json",
+  "dockerfile": "./Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "views": {
+        "overview": {
+          "title": "Pages",
+          "transformation": {
+            "fields": ["company", "title", "url", "values_candidates", "fetched_at"]
+          },
+          "display": {
+            "component": "table"
+          }
+        }
+      }
+    }
+  }
+}

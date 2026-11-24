@@ -48,7 +48,7 @@ which habits you fixed and which ones you keep repeating.
 | [Live demo](https://hotseat-swart.vercel.app) | The full interview in your browser (memory runs on a local install) |
 | `engine/` | The interview engine: panel, checks, trained critic, C++ core, coding chat, voices, transcription |
 | `src/` | The 3D room, voices, speech input, coding round, attention tracking, ledger, score card |
-| `bruin/` | The memory pipeline: 9 DuckDB assets, 55 quality checks |
+| `bruin/` | The memory pipeline: 9 DuckDB assets, 57 quality checks |
 | `native/` | The C++ core and its WebAssembly build |
 | `train/` | The answer critic's trainer and data |
 
@@ -79,6 +79,15 @@ memory of you that carries from one session to the next.
 Each has their own look, their own voice, and their own reactions on screen: heads turn to whoever speaks, Maya nods
 when impressed, Sol tilts their head when skeptical, and all three lean in to confer while they decide.
 
+### Company Mode
+
+Before you sit down you can pick a company: Google, Amazon, Meta, Stripe, Ramp, or a general panel. Each one is a
+small file in `data/companies/`, researched from the company's own careers and interview prep pages plus a few
+reputable write-ups (sources are listed in each file). It holds the company's stated values, its loop, its coding
+style, its rubric terms and how each of our three interviewers adapts. At Amazon, for example, Sol acts as the Bar
+Raiser for real and maps every answer to a Leadership Principle. The panel probes those values, the coding problem
+follows the company's style, and the verdict rates you on each value with a quote from your answers.
+
 ---
 
 ## Architecture at a Glance
@@ -106,7 +115,7 @@ flowchart TB
 
     subgraph MEMORY["Memory"]
         direction LR
-        LOG[("Session log")]:::mem --> BRUIN["Bruin pipeline<br/>9 assets, 55 checks"]:::mem
+        LOG[("Session log")]:::mem --> BRUIN["Bruin pipeline<br/>9 assets, 57 checks"]:::mem
         BRUIN --> PROFILE[("Profile<br/>fixed vs repeating")]:::mem
         BRUIN --> RETRAIN["Critic retrain<br/>scikit-learn"]:::mem
     end
@@ -245,7 +254,7 @@ Bruin is not a side integration here. It is the reason the panel can remember yo
 | `mart.profile` | One row per candidate: weak and strong topics, weak habits, trend, focus sentence |
 | `export.profile_json` | Writes the profiles out; `run.sh` swaps the file in atomically |
 
-**55 quality checks** run on every pipeline run: asker must be one of the three interviewers, scores between 1 and 5,
+**57 quality checks** run on every pipeline run: asker must be one of the three interviewers, scores between 1 and 5,
 verdicts from the allowed set, no duplicate turns in a session, one profile row per candidate, and every candidate with
 turns has a profile. If any check fails, the old profile stays and the panel keeps working.
 
@@ -285,6 +294,60 @@ time; tag F1 is 0.84 for strong_example, 0.91 for we_not_i, 0.70 for vague, but 
 rambling (1 test example). The harder test: trained on generated answers only and scored against the 20 real session
 answers, the error is 1.1 points and 75% land within 1. Real answers are shorter and the panel grades them in
 context, which the critic can't see. That gap is exactly why it flags instead of overriding.
+
+## Trained Agents
+
+The critic learns to score. The panel also learns **who should ask what next**. Before every question except the
+coding round, a policy trained with reinforcement learning picks an interviewer, a topic and a difficulty band, and the
+engine adds one line to the panel's prompt: "[POLICY] Trained policy suggests: Sol asks about metrics at medium
+difficulty (expected info gain 0.42)." The panel keeps the final say. The engine notes whether it followed ("Panel
+followed the trained policy") or not ("Panel overrode the policy: chose Maya on ownership"), and the ledger shows the
+pick quietly as "Policy: Sol · metrics · medium".
+
+- **Simulator** (`train/sim.py`). Synthetic candidates with a latent skill per topic (ownership, metrics, tradeoffs,
+  system design, conflict, debugging, coding) on the C++ core's 1 to 5 scale. Skills share a general level and a
+  people or technical cluster, about a third of candidates have one big weak spot, and habits such as no_numbers or
+  deflects pull specific topics down. Answers are scored with the core's Rasch model plus noise. Each interviewer has
+  a topic affinity: Sol's metrics questions and Theo's coding and design questions separate strong from weak answers
+  more sharply than off-topic ones. Some candidates arrive with remembered weak topics, like a Bruin profile.
+- **Belief.** A Gaussian over all seven skills, updated after every answer with the core's likelihood. A good coding
+  answer also moves the belief about system design a little, through the correlations.
+- **Reward.** Drop in total posterior variance (information gained about the candidate), plus 0.25 the first time a
+  remembered weak topic is probed, minus 0.3 for repeating a topic and 0.1 when the same interviewer asks twice in a
+  row.
+- **Algorithm.** Q-learning with a linear Q over 32 features (one-step expected gain, the topic's uncertainty,
+  coverage, memory, asker affinity, ability and SE from the core, questions left), fit in batches (fitted
+  Q-iteration) on 30,000 seeded episodes, about 40 seconds on a laptop. Plain online Q-learning and Monte Carlo targets were tried first and stayed
+  below a one-step greedy baseline; the batch fit fixed that. One thing it learned on its own: don't hand Theo the
+  question right before the coding round, since he runs that round anyway (weight -0.13 on that feature).
+- **Runs in Node.** Weights export to `engine/policy-model.json` (a few KB). `engine/policy.js` copies the belief
+  update and the features, a test checks its Q values match Python's on saved states, and the server picks up a new
+  file without a restart.
+
+Results on 2,000 held-out **simulated** candidates (same candidates and random streams for every policy):
+
+| Policy | Avg return | Skill RMSE | Weak topic probed |
+|---|---|---|---|
+| Trained (Q-learning) | **2.84** | **0.626** | 99.7% |
+| One-step greedy on expected gain | 2.79 | 0.626 | 87.6% |
+| Fixed rotation (Maya, Sol, Theo, ...) | 2.61 | 0.650 | 86.8% |
+| Random | 1.63 | 0.691 | 74.6% |
+| No questions (population average) | | 0.878 | |
+
+![Policy learning curve](docs/policy-learning.png)
+
+Read it honestly. These are simulated candidates, so the numbers say the policy is good at the simulator, not at real
+people. Five questions can't pin down seven skills, so the error only drops from 0.88 to 0.63. Against the one-step
+greedy baseline the trained policy ties on skill error; its extra return comes from probing remembered weak topics
+and not repeating itself. Most of the learning happens in the first few hundred episodes, because the features already
+carry the one-step math.
+
+**What learns from real sessions.** Every logged turn in `data/turns.jsonl` is replayed through the same belief and
+turned into Q-learning transitions, and after each Bruin run `train/policy.py --quick` refits on them (plus 1,500 fresh
+simulated episodes), anchored to the current weights, in about a second. There are 25 real turns from 5 sessions so
+far (23 transitions), and none logged the difficulty they were asked at, so the medium band is assumed for them. New
+sessions log difficulty. With this little data the update moves the weights by about 0.06 and the policy's held-out
+simulated return by less than 0.01, which is the point: real sessions nudge it, they don't rewrite it yet.
 
 ## Why Hotseat Wins
 
@@ -373,25 +436,55 @@ npm run check               # formatting and 57 unit tests
 | `engine/prompts.js`, `engine/schemas.js`, `engine/agents.js` | What each agent is told and the exact shape it must answer in |
 | `engine/core.js`, `native/` | C++ core: WebAssembly loader, JS fallback, source and build script |
 | `engine/critic.js`, `train/` | Trained critic: Node inference, Python trainer, data |
+| `engine/policy.js`, `train/sim.py`, `train/policy.py` | Trained question policy: Node inference, simulator, Q-learning |
 | `engine/coding.js` | Theo's coding chat and the integrity and talk-through text |
 | `engine/tts.js`, `engine/stt.js` | Voices and transcription |
 | `engine/memory.js` | Session log, profile, Bruin queue |
+| `engine/companies.js`, `data/companies/` | Company mode: the researched playbooks and the prompt slice each call gets |
 | `src/main.js` | Interview flow, ledger, score card |
 | `src/scene.js` | Room, avatars, door entrance, exit, webcam |
 | `src/voice.js`, `src/listen.js` | Voice queue and speech input |
 | `src/coding.js`, `public/py-worker.js` | Coding round and the Python judge |
 | `src/gaze.js` | Attention tracking |
+| `src/company.js` | Company picker on the start card and the HUD label |
 | `bruin/` | The 9 SQL assets, their checks and `run.sh` |
-| `tests/` | Unit tests for checks, critic and C++ core |
+| `tests/` | Unit tests for checks, critic, question policy and C++ core |
 
 ---
 
 ## Limits
 
 - The hosted demo runs the full interview but doesn't keep memory or retrain the critic. Run it locally for that.
+- The question policy was trained on simulated candidates. Its numbers describe the simulator, and only 25 real turns
+  have fed back into it so far.
 - The critic is honest about its weak spots: it rarely catches answers without numbers (F1 0.22). It only flags,
   never overrides.
 - Attention tracking needs a camera and works best in good light. It reports, it never accuses.
 - Candidates are identified by the name they type. Fine for practice, not for anything private.
 - The panel's scores are model judgments. The quotes and checks keep them honest, but they are not a real hiring
   decision.
+
+## Company research with an Apify Actor
+
+`actor/` is an Apify Actor, `hotseat-company-research`, built with Crawlee. It is deployed as
+`enterprising_arboretum_iq2/hotseat-company-research`.
+
+- What it scrapes: official careers pages only. Google, Amazon, Meta, Stripe and Ramp start from
+  curated pages (how we hire, interview prep, leadership principles, values). A new company starts
+  from its careers URL, or from `<name>.com/careers`, `/jobs` and `/about/values`, and follows
+  same-site links about interviews, hiring, values and culture. CheerioCrawler first, robots.txt
+  respected, 40 requests a minute at most. Pages that render in JS get one PlaywrightCrawler pass.
+- Each page becomes `{company, url, title, headings, values_candidates, interview_text, fetched_at}`.
+- "+ Add company" on the start screen calls `POST /api/companies/research`. The server runs the
+  Actor on Apify when `APIFY_TOKEN` and `APIFY_ACTOR` are set, or the same crawl code in-process
+  otherwise. One Claude call turns the pages into a profile in the `data/companies` shape, with
+  sources set to the scraped URLs, and saves it.
+- `npm run research:companies` re-checks the five built-in profiles against their official pages.
+  It only adds confirming sources and fixes value spelling; everything else goes to
+  `train/data/company_refresh.json` for a person to review.
+
+Limits: `values_candidates` is a heuristic and picks up stray lines. Stripe's official pages
+confirm almost nothing, and Ramp publishes no interview process. Interview loop details for new
+companies mostly come from the model and are marked "(uncertain)". The hosted demo cannot run
+the local crawl and cannot save new files, so there research needs the Apify token and lasts only
+for that server instance.

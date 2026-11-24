@@ -13,6 +13,11 @@ columns:
     type: varchar
     checks:
       - name: not_null
+  - name: company
+    type: varchar
+    description: "Company mode the interview ran in, older rows without one are general"
+    checks:
+      - name: not_null
   - name: turn
     type: integer
     checks:
@@ -45,6 +50,7 @@ custom_checks:
 SELECT
     coalesce(nullif(trim(candidate_id), ''), 'demo') AS candidate_id,
     session_id,
+    coalesce(nullif(lower(trim(company)), ''), 'general') AS company,
     CAST(ts AS TIMESTAMP) AS ts,
     turn,
     asker,
@@ -57,7 +63,7 @@ FROM read_json(
     'data/turns.jsonl',
     format = 'newline_delimited',
     columns = {
-        candidate_id: 'VARCHAR', session_id: 'VARCHAR', ts: 'VARCHAR', turn: 'INTEGER', asker: 'VARCHAR',
+        candidate_id: 'VARCHAR', session_id: 'VARCHAR', company: 'VARCHAR', ts: 'VARCHAR', turn: 'INTEGER', asker: 'VARCHAR',
         topic: 'VARCHAR', question: 'VARCHAR', answer: 'VARCHAR',
         score: 'INTEGER', tags: 'VARCHAR[]'
     }

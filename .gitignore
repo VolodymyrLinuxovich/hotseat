@@ -15,3 +15,5 @@ data/*.tmp
 .vercel
 native/bench
 .venv
+actor/node_modules
+actor/storage

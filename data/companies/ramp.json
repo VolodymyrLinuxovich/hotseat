@@ -1,0 +1,99 @@
+{
+  "id": "ramp",
+  "name": "Ramp",
+  "tagline": "Practical, product-ish coding that grows in levels; builders only",
+  "values": [
+    {
+      "name": "We only hire builders",
+      "meaning": "Solve hard problems, build without permission, ship work you are proud of."
+    },
+    {
+      "name": "If it doesn't save you time or money, we don't build it",
+      "meaning": "Judge work by time or money saved for customers."
+    },
+    {
+      "name": "'Hands off' doesn't exist at Ramp",
+      "meaning": "Everyone does hands-on work whatever their role."
+    },
+    {
+      "name": "We're a proud meritocracy",
+      "meaning": "Recognition follows the work, not titles."
+    },
+    {
+      "name": "Working at Ramp is a bet on yourself",
+      "meaning": "Take big responsibility and grow fast."
+    }
+  ],
+  "loop": [
+    {
+      "round": "CodeSignal assessment",
+      "focus": "One multi-level practical problem, about 90 min (uncertain)."
+    },
+    {
+      "round": "Recruiter screen",
+      "focus": "Background and motivation for Ramp."
+    },
+    {
+      "round": "Technical rounds",
+      "focus": "Pair-programming on practical build tasks, not classic LeetCode (uncertain)."
+    },
+    {
+      "round": "Final round",
+      "focus": "Technical plus a values-based behavioral talk (uncertain)."
+    }
+  ],
+  "behavioral_themes": [
+    "Something you built without being asked",
+    "Shipping fast by cutting scope",
+    "End-to-end ownership of a product",
+    "Rate of learning over time (uncertain)",
+    "Saving users time or money",
+    "Why fintech and why Ramp"
+  ],
+  "coding_style": "Practical, product-like tasks such as an in-memory system, CRUD over records, or calling an API, with requirements added in stages (uncertain). Graded on clean, working code that adapts as requirements change, plus thinking out loud with the interviewer.",
+  "rubric": [
+    "Working code at each level (uncertain)",
+    "Code that refactors cleanly as requirements grow",
+    "Practical engineering judgment",
+    "Builder mindset and ownership",
+    "Values alignment (uncertain)"
+  ],
+  "question_themes": [
+    "In-memory store or bank API with staged features",
+    "CRUD over a list of records",
+    "DFS over data fetched from an API",
+    "Class design with stacked requirements",
+    "Small front-end or React build (uncertain)",
+    "Add a feature to make a failing test pass"
+  ],
+  "panel_flavor": {
+    "manager": "Maya asks what you built on your own initiative and how much time or money it saved real users.",
+    "tech": "Theo pairs on a product-like task, then adds a new requirement each level to see if your code bends or breaks.",
+    "skeptic": "Sol asks whether you would join this candidate if they started a company, and wants shipped proof and numbers, not plans."
+  },
+  "uncertain": [
+    "No official Ramp page describes the interview; loop details come from candidate reports",
+    "Intern loop length and whether system design appears for interns",
+    "'Slope' as an interview term comes from a third-party guide",
+    "Values above are principles stated on the careers page, not a formal values list"
+  ],
+  "sources": [
+    {
+      "title": "Ramp Careers",
+      "url": "https://ramp.com/careers"
+    },
+    {
+      "title": "TechPrep: Ramp interview process",
+      "url": "https://www.techprep.app/blog/ramp-interview-process"
+    },
+    {
+      "title": "Interview Query: Ramp software engineer",
+      "url": "https://www.interviewquery.com/guides/ramp-software-engineer"
+    },
+    {
+      "title": "Exponent: Ramp SWE intern interview experience",
+      "url": "https://www.tryexponent.com/experiences/ramp-software-engineer-intern-interview-eda007"
+    }
+  ],
+  "researched_at": "2026-11-23"
+}

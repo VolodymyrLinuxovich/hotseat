@@ -1,5 +1,9 @@
 .tools
-data
+# The session logs stay local, but the company playbooks ship with the API.
+data/*
+!data/companies
 logs
 .env
 *.duckdb*
+actor/node_modules
+actor/storage

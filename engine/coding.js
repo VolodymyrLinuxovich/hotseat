@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { AGENTS } from "./agents.js";
 import { checkChatReply, formatDuration, summarizeIntegrity } from "./checks.js";
+import { companyBlock, getCompany } from "./companies.js";
 import { MODEL } from "./config.js";
 
 const client = new Anthropic();
@@ -52,15 +53,16 @@ function chatLines(chat) {
     .join("\n");
 }
 
-function chatSystem(problem) {
+function chatSystem(problem, company) {
   const theo = AGENTS.tech;
+  const companyText = companyBlock(company, "chat");
   const tests = problem.tests
     .slice(0, 4)
     .map((t) => `args ${t.args_json} -> ${t.expected_json}`)
     .join("\n");
 
   return `You are ${theo.name}, the ${theo.role}, running a live coding round in a job interview. ${theo.persona}
-The candidate is solving this problem while you watch their editor:
+${companyText ? `${companyText}\n` : ""}The candidate is solving this problem while you watch their editor:
 Title: ${problem.title}
 ${problem.description}
 Function: ${problem.function_name}
@@ -115,7 +117,7 @@ export async function codingChat(session, { message, code, context } = {}) {
   const res = await client.messages.parse({
     model: MODEL,
     max_tokens: 1000,
-    system: chatSystem(turn.problem),
+    system: chatSystem(turn.problem, getCompany(session.company)),
     messages: [{ role: "user", content: chatUser(turn, said, code, context) }],
     output_config: { effort: "low", format: zodOutputFormat(ChatSchema) },
   });

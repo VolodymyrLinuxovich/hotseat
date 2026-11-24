@@ -1,0 +1,152 @@
+/* Company picker on the start card, the HUD label, and the value ratings on the score card.
+   Every company card uses the same neutral colors on purpose: no brand colors. */
+
+#companyPicker,
+#companySlot {
+  margin: 14px 0 4px;
+  text-align: left;
+}
+
+.clabel {
+  font-size: 13px;
+  color: #b9ad9f;
+  margin-bottom: 8px;
+}
+
+.cgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.ccard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #3a322b;
+  border-radius: 10px;
+  background: #1d1915;
+  color: #f3ece2;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ccard:hover {
+  border-color: #5a4d40;
+}
+
+.ccard.on {
+  border-color: #e8a33d;
+  background: #2a2118;
+}
+
+.ccard:focus-visible {
+  outline: 2px solid #e8a33d;
+  outline-offset: 2px;
+}
+
+.cname {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.ctag {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #b9ad9f;
+}
+
+.cchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cchip {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #2f2821;
+  color: #d8ccbd;
+}
+
+#hudCompany {
+  font-size: 14px;
+  color: #d8ccbd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.cvalues .vsignal {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  background: #2f2821;
+  color: #d8ccbd;
+}
+
+.cvalues .vsignal.strong {
+  background: #203a2a;
+  color: #a8e6bd;
+}
+
+.cvalues .vsignal.weak {
+  background: #4a2620;
+  color: #ffb4a3;
+}
+
+@media (max-width: 520px) {
+  .cgrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #hudCompany {
+    font-size: 12px;
+  }
+}
+
+/* "+ Add company" under the picker. */
+.cadd {
+  margin: 6px 0 4px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.caddopen {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #b9ad9f;
+  font: inherit;
+  cursor: pointer;
+}
+
+.caddopen:hover {
+  color: #f3ece2;
+}
+
+.caddform {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* display: flex would otherwise beat the hidden attribute. */
+.caddform[hidden] {
+  display: none;
+}
+
+.caddform input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.caddstatus {
+  margin-top: 6px;
+  color: #b9ad9f;
+}

@@ -40,12 +40,12 @@ praise tags like `strong_example` are ignored. A topic counts as improved or
 regressed when its average moved half a point or more. Candidates with one
 session get empty `habits` and `topic_deltas`.
 
-## Quality checks (55)
+## Quality checks (57)
 
-- `raw.turns`: `not_null` on session_id, turn, asker, topic, score; `asker`
+- `raw.turns`: `not_null` on session_id, company, turn, asker, topic, score; `asker`
   accepted values manager, tech, skeptic; `score` min 1 and max 5; `turn`
   positive; custom check for duplicate turns within a session.
-- `raw.sessions`: `session_id` not null and unique; `verdict` accepted values
+- `raw.sessions`: `session_id` not null and unique; `company` not null; `verdict` accepted values
   hire, no_hire, lean_hire, lean_no_hire; `overall` between 1 and 5.
 - `mart.habit_progress`: one row per candidate and tag, `status` accepted values
   fixed, repeating, new, counts non negative, custom check that the status
@@ -53,7 +53,7 @@ session get empty `habits` and `topic_deltas`.
 - `mart.topic_progress`: one row per candidate and topic, both averages between
   1 and 5, `status` accepted values improved, regressed, steady, custom checks
   that delta equals latest minus before and that the status matches the delta.
-- Marts: unique keys, score ranges, positive counts, one row per candidate and topic or tag, one profile row per candidate, and every candidate with turns has a profile. Every table carries `candidate_id`; rows without one fall back to `demo`.
+- Marts: unique keys, score ranges, positive counts, one row per candidate and topic or tag, one profile row per candidate, and every candidate with turns has a profile. Every table carries `candidate_id`; rows without one fall back to `demo`. Both raw tables carry `company` (the company mode the interview ran in); older rows without one become `general`, and candidate memory still aggregates across companies.
 
 ## Config
 

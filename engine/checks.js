@@ -588,6 +588,14 @@ export function checkVerdict(v, answered) {
   for (const g of v.growth) {
     g.evidence_quote = fixQuote(g.evidence_quote, `The "${g.area}" note`);
   }
+  // A value nobody showed has no quote to check, and older verdicts have no values at all.
+  for (const val of v.values || []) {
+    if (val.signal === "not_seen" || !val.evidence_quote) {
+      val.evidence_quote = "";
+      continue;
+    }
+    val.evidence_quote = fixQuote(val.evidence_quote, `The "${val.value}" rating`);
+  }
 
   // Overall score in range, one decimal.
   const overall = Math.round(Math.min(5, Math.max(1, Number(v.overall) || 1)) * 10) / 10;

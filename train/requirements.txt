@@ -1,6 +1,8 @@
-# Training the answer critic (train/critic.py). The Node server needs none of this.
+# Training the answer critic (train/critic.py) and the question policy (train/policy.py). The Node server needs none of this.
 scikit-learn>=1.5
 numpy>=1.26
 scipy>=1.11
+# Only for the learning curve plot in a full train/policy.py run.
+matplotlib>=3.8
 # Only for regenerating the seed answers (train/generate_seed.py).
 anthropic>=0.70

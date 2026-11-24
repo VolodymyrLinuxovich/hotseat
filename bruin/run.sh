@@ -52,3 +52,12 @@ fi
 if [ -n "$CRITIC_PY" ] && "$CRITIC_PY" -c "import sklearn" >/dev/null 2>&1; then
   "$CRITIC_PY" "$ROOT/train/critic.py" --quick || echo "critic retrain failed; kept the previous model" >&2
 fi
+
+# Then fine-tune the question policy: a short Q-learning round on simulated interviews plus
+# a small, anchored update from the logged sessions (train/policy.py --quick, about a second).
+# It only needs numpy, and only runs with the repo's .venv; without it the step is skipped
+# silently, and a failed run leaves engine/policy-model.json as it was.
+POLICY_PY="$ROOT/.venv/bin/python"
+if [ -x "$POLICY_PY" ] && "$POLICY_PY" -c "import numpy" >/dev/null 2>&1; then
+  "$POLICY_PY" "$ROOT/train/policy.py" --quick || echo "policy fine-tune failed; kept the previous model" >&2
+fi

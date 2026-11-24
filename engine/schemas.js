@@ -59,6 +59,14 @@ export const VerdictSchema = z.object({
   overall: z.number(),
   strengths: z.array(z.string()),
   growth: z.array(z.object({ area: z.string(), evidence_quote: z.string(), drill: z.string() })),
+  // The company's values (or the general ones), each with a signal and a quote as evidence.
+  values: z.array(
+    z.object({
+      value: z.string(),
+      signal: z.enum(["strong", "mixed", "weak", "not_seen"]),
+      evidence_quote: z.string(),
+    }),
+  ),
   summary: z.string(),
   spoken_verdict: z.string(),
 });

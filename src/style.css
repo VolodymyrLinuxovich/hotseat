@@ -1041,3 +1041,190 @@ body.frozen::after {
   font-size: 12px;
   color: #8a7e70;
 }
+
+/* ---------- start card with the character creator ---------- */
+/* two columns: the form on the left, the creator on the right; they stack on narrow windows */
+#intro {
+  width: min(1120px, 94vw);
+  max-height: 92vh;
+  padding: 28px;
+}
+.introgrid {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 28px;
+  align-items: start;
+}
+.introform h1 {
+  font-size: 48px;
+}
+.introform .lede {
+  font-size: 16px;
+}
+.creator {
+  border-left: 1px solid rgba(243, 236, 226, 0.08);
+  padding-left: 28px;
+  min-width: 0;
+}
+.chead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.csub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #8a7e70;
+}
+.cactions {
+  display: flex;
+  gap: 8px;
+}
+.cactions button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.cbody {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 20px;
+}
+.cstage {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 35%, #3a2f27 0%, #1d1916 70%);
+  border: 1px solid #3a322b;
+  height: min(440px, 58vh);
+  min-height: 300px;
+}
+.cstage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.cstage canvas.grabbing {
+  cursor: grabbing;
+}
+.cstagehint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  text-align: center;
+  font-size: 11px;
+  color: #8a7e70;
+  pointer-events: none;
+}
+.ccontrols {
+  min-width: 0;
+}
+.ctabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #1d1916;
+  border: 1px solid #3a322b;
+  margin-bottom: 14px;
+}
+.ctabs button {
+  flex: 1;
+  padding: 7px 8px;
+  font-size: 13px;
+  border: 0;
+  background: transparent;
+  color: #a89c8d;
+}
+.ctabs button.on {
+  background: #2e2722;
+  color: #f3ece2;
+}
+.crow {
+  margin-bottom: 14px;
+}
+.crowlabel {
+  font-size: 12px;
+  color: #a89c8d;
+  margin-bottom: 7px;
+}
+.crowbody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chipbtn {
+  padding: 6px 11px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 99px;
+  background: #1d1916;
+}
+.chipbtn.on {
+  border-color: #e8a33d;
+  background: #2a2118;
+  color: #f6d9a8;
+}
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--c);
+  border: 2px solid rgba(243, 236, 226, 0.12);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25);
+}
+.swatch:hover {
+  background: var(--c);
+  border-color: rgba(243, 236, 226, 0.4);
+}
+.swatch.on {
+  border-color: #e8a33d;
+  box-shadow:
+    0 0 0 2px #1c1714,
+    0 0 0 4px #e8a33d;
+}
+/* the custom colour swatch: a rainbow ring around the chosen colour, with the native picker on top */
+.swatch.picker {
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  cursor: pointer;
+  background:
+    radial-gradient(circle, var(--c) 0 45%, transparent 47%),
+    conic-gradient(#e85d5d, #e8c35d, #6ee87a, #5dc3e8, #8a5de8, #e85dc0, #e85d5d);
+}
+.swatch.picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 960px) {
+  .introgrid {
+    grid-template-columns: 1fr;
+  }
+  .creator {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid rgba(243, 236, 226, 0.08);
+    padding-top: 20px;
+  }
+}
+@media (max-width: 640px) {
+  .cbody {
+    grid-template-columns: 1fr;
+  }
+  .cstage {
+    height: 320px;
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Company research",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "companies": {
+      "title": "Companies",
+      "type": "array",
+      "editor": "json",
+      "prefill": [{ "name": "Stripe" }, { "name": "Figma", "urls": ["https://www.figma.com/careers/"] }],
+      "description": "Each entry is { name, urls? }. Google, Amazon, Meta, Stripe and Ramp have curated official pages. Without urls a new company is discovered from <name>.com/careers, /jobs and /about/values."
+    },
+    "maxPagesPerCompany": {
+      "title": "Pages per company",
+      "type": "integer",
+      "default": 6,
+      "minimum": 1,
+      "maximum": 25,
+      "description": "How many useful pages to keep for each company (1 to 25)",
+      "editor": "number"
+    }
+  },
+  "required": ["companies"]
+}

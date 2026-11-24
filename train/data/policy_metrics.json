@@ -1,0 +1,419 @@
+{
+ "generated_at": "2026-11-24T00:25:11+00:00",
+ "algorithm": "fitted Q-iteration (batch Q-learning), linear features, epsilon-greedy rounds, no discount",
+ "episodes": 30000,
+ "seed": 7,
+ "held_out_candidates": 2000,
+ "train_seconds": 40.7,
+ "held_out": {
+  "trained": {
+   "avg_return": 2.8437,
+   "return_se": 0.0057,
+   "avg_info_gain": 2.6486,
+   "skill_rmse": 0.6255,
+   "weak_topic_probed": 0.9966
+  },
+  "trained_sim_only": {
+   "avg_return": 2.845,
+   "return_se": 0.0057,
+   "avg_info_gain": 2.6494,
+   "skill_rmse": 0.6261,
+   "weak_topic_probed": 0.9966
+  },
+  "random": {
+   "avg_return": 1.6256,
+   "return_se": 0.0086,
+   "avg_info_gain": 1.919,
+   "skill_rmse": 0.6912,
+   "weak_topic_probed": 0.7457
+  },
+  "rotation": {
+   "avg_return": 2.6123,
+   "return_se": 0.005,
+   "avg_info_gain": 2.4622,
+   "skill_rmse": 0.6495,
+   "weak_topic_probed": 0.8683
+  },
+  "greedy_one_step_gain": {
+   "avg_return": 2.794,
+   "return_se": 0.005,
+   "avg_info_gain": 2.6497,
+   "skill_rmse": 0.6257,
+   "weak_topic_probed": 0.8763
+  }
+ },
+ "prior_only_rmse": 0.8778,
+ "real_sessions": {
+  "sessions": 5,
+  "turns": 25,
+  "turns_with_difficulty": 0,
+  "transitions": 23,
+  "td_rmse_before": 0.2031,
+  "td_rmse_after": 0.1435,
+  "weight_change": 0.0566
+ },
+ "learning_curve": [
+  {
+   "avg_return": 0.9226,
+   "return_se": 0.0098,
+   "avg_info_gain": 1.9734,
+   "skill_rmse": 0.7401,
+   "weak_topic_probed": 0.3907,
+   "episode": 0
+  },
+  {
+   "avg_return": 2.8046,
+   "return_se": 0.0146,
+   "avg_info_gain": 2.5594,
+   "skill_rmse": 0.6606,
+   "weak_topic_probed": 1.0,
+   "episode": 50,
+   "train_return": 1.376
+  },
+  {
+   "avg_return": 2.8732,
+   "return_se": 0.0161,
+   "avg_info_gain": 2.634,
+   "skill_rmse": 0.6375,
+   "weak_topic_probed": 1.0,
+   "episode": 150,
+   "train_return": 2.388
+  },
+  {
+   "avg_return": 2.8842,
+   "return_se": 0.016,
+   "avg_info_gain": 2.64,
+   "skill_rmse": 0.6431,
+   "weak_topic_probed": 1.0,
+   "episode": 300,
+   "train_return": 2.4786
+  },
+  {
+   "avg_return": 2.8784,
+   "return_se": 0.0162,
+   "avg_info_gain": 2.6329,
+   "skill_rmse": 0.6434,
+   "weak_topic_probed": 1.0,
+   "episode": 500,
+   "train_return": 2.5357
+  },
+  {
+   "avg_return": 2.873,
+   "return_se": 0.0158,
+   "avg_info_gain": 2.6346,
+   "skill_rmse": 0.6432,
+   "weak_topic_probed": 1.0,
+   "episode": 1000,
+   "train_return": 2.5771
+  },
+  {
+   "avg_return": 2.8723,
+   "return_se": 0.0158,
+   "avg_info_gain": 2.6348,
+   "skill_rmse": 0.6444,
+   "weak_topic_probed": 1.0,
+   "episode": 2000,
+   "train_return": 2.5645
+  },
+  {
+   "avg_return": 2.8737,
+   "return_se": 0.0155,
+   "avg_info_gain": 2.6362,
+   "skill_rmse": 0.6454,
+   "weak_topic_probed": 1.0,
+   "episode": 3000,
+   "train_return": 2.5302
+  },
+  {
+   "avg_return": 2.8723,
+   "return_se": 0.0157,
+   "avg_info_gain": 2.6348,
+   "skill_rmse": 0.645,
+   "weak_topic_probed": 1.0,
+   "episode": 4000,
+   "train_return": 2.5673
+  },
+  {
+   "avg_return": 2.8741,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6374,
+   "skill_rmse": 0.6477,
+   "weak_topic_probed": 1.0,
+   "episode": 5000,
+   "train_return": 2.5698
+  },
+  {
+   "avg_return": 2.8768,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6435,
+   "skill_rmse": 0.647,
+   "weak_topic_probed": 1.0,
+   "episode": 6000,
+   "train_return": 2.5922
+  },
+  {
+   "avg_return": 2.8717,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6376,
+   "skill_rmse": 0.6448,
+   "weak_topic_probed": 1.0,
+   "episode": 7000,
+   "train_return": 2.5805
+  },
+  {
+   "avg_return": 2.8729,
+   "return_se": 0.0157,
+   "avg_info_gain": 2.6362,
+   "skill_rmse": 0.6444,
+   "weak_topic_probed": 1.0,
+   "episode": 8000,
+   "train_return": 2.6052
+  },
+  {
+   "avg_return": 2.8761,
+   "return_se": 0.0157,
+   "avg_info_gain": 2.637,
+   "skill_rmse": 0.6464,
+   "weak_topic_probed": 1.0,
+   "episode": 9000,
+   "train_return": 2.6112
+  },
+  {
+   "avg_return": 2.8732,
+   "return_se": 0.0157,
+   "avg_info_gain": 2.6357,
+   "skill_rmse": 0.647,
+   "weak_topic_probed": 1.0,
+   "episode": 10000,
+   "train_return": 2.5939
+  },
+  {
+   "avg_return": 2.87,
+   "return_se": 0.0154,
+   "avg_info_gain": 2.635,
+   "skill_rmse": 0.6454,
+   "weak_topic_probed": 1.0,
+   "episode": 11000,
+   "train_return": 2.6258
+  },
+  {
+   "avg_return": 2.8757,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6432,
+   "skill_rmse": 0.648,
+   "weak_topic_probed": 1.0,
+   "episode": 12000,
+   "train_return": 2.6426
+  },
+  {
+   "avg_return": 2.8749,
+   "return_se": 0.0155,
+   "avg_info_gain": 2.6424,
+   "skill_rmse": 0.6482,
+   "weak_topic_probed": 1.0,
+   "episode": 13000,
+   "train_return": 2.6311
+  },
+  {
+   "avg_return": 2.87,
+   "return_se": 0.0155,
+   "avg_info_gain": 2.6392,
+   "skill_rmse": 0.6442,
+   "weak_topic_probed": 1.0,
+   "episode": 14000,
+   "train_return": 2.6577
+  },
+  {
+   "avg_return": 2.8764,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6431,
+   "skill_rmse": 0.6474,
+   "weak_topic_probed": 1.0,
+   "episode": 15000,
+   "train_return": 2.6458
+  },
+  {
+   "avg_return": 2.8707,
+   "return_se": 0.0153,
+   "avg_info_gain": 2.6373,
+   "skill_rmse": 0.6458,
+   "weak_topic_probed": 1.0,
+   "episode": 16000,
+   "train_return": 2.6765
+  },
+  {
+   "avg_return": 2.8744,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6402,
+   "skill_rmse": 0.645,
+   "weak_topic_probed": 1.0,
+   "episode": 17000,
+   "train_return": 2.6892
+  },
+  {
+   "avg_return": 2.879,
+   "return_se": 0.0154,
+   "avg_info_gain": 2.644,
+   "skill_rmse": 0.6425,
+   "weak_topic_probed": 1.0,
+   "episode": 18000,
+   "train_return": 2.6805
+  },
+  {
+   "avg_return": 2.874,
+   "return_se": 0.0155,
+   "avg_info_gain": 2.6399,
+   "skill_rmse": 0.646,
+   "weak_topic_probed": 1.0,
+   "episode": 19000,
+   "train_return": 2.7006
+  },
+  {
+   "avg_return": 2.8756,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6398,
+   "skill_rmse": 0.6445,
+   "weak_topic_probed": 1.0,
+   "episode": 20000,
+   "train_return": 2.7086
+  },
+  {
+   "avg_return": 2.8705,
+   "return_se": 0.0153,
+   "avg_info_gain": 2.6371,
+   "skill_rmse": 0.6467,
+   "weak_topic_probed": 1.0,
+   "episode": 21000,
+   "train_return": 2.7001
+  },
+  {
+   "avg_return": 2.8687,
+   "return_se": 0.0151,
+   "avg_info_gain": 2.6362,
+   "skill_rmse": 0.6455,
+   "weak_topic_probed": 1.0,
+   "episode": 22000,
+   "train_return": 2.7122
+  },
+  {
+   "avg_return": 2.874,
+   "return_se": 0.0155,
+   "avg_info_gain": 2.639,
+   "skill_rmse": 0.6459,
+   "weak_topic_probed": 1.0,
+   "episode": 23000,
+   "train_return": 2.7196
+  },
+  {
+   "avg_return": 2.8667,
+   "return_se": 0.015,
+   "avg_info_gain": 2.6375,
+   "skill_rmse": 0.6463,
+   "weak_topic_probed": 1.0,
+   "episode": 24000,
+   "train_return": 2.7474
+  },
+  {
+   "avg_return": 2.8751,
+   "return_se": 0.0156,
+   "avg_info_gain": 2.6426,
+   "skill_rmse": 0.6493,
+   "weak_topic_probed": 1.0,
+   "episode": 25000,
+   "train_return": 2.7635
+  },
+  {
+   "avg_return": 2.8722,
+   "return_se": 0.0154,
+   "avg_info_gain": 2.6406,
+   "skill_rmse": 0.6495,
+   "weak_topic_probed": 1.0,
+   "episode": 26000,
+   "train_return": 2.7354
+  },
+  {
+   "avg_return": 2.8665,
+   "return_se": 0.0153,
+   "avg_info_gain": 2.6357,
+   "skill_rmse": 0.6494,
+   "weak_topic_probed": 1.0,
+   "episode": 27000,
+   "train_return": 2.7701
+  },
+  {
+   "avg_return": 2.8737,
+   "return_se": 0.0154,
+   "avg_info_gain": 2.642,
+   "skill_rmse": 0.6488,
+   "weak_topic_probed": 1.0,
+   "episode": 28000,
+   "train_return": 2.7569
+  },
+  {
+   "avg_return": 2.8721,
+   "return_se": 0.0153,
+   "avg_info_gain": 2.6413,
+   "skill_rmse": 0.648,
+   "weak_topic_probed": 1.0,
+   "episode": 29000,
+   "train_return": 2.7809
+  },
+  {
+   "avg_return": 2.8718,
+   "return_se": 0.0154,
+   "avg_info_gain": 2.6385,
+   "skill_rmse": 0.6459,
+   "weak_topic_probed": 1.0,
+   "episode": 30000,
+   "train_return": 2.7862
+  }
+ ],
+ "weights": {
+  "bias": -0.2294,
+  "expected_gain": 0.1458,
+  "expected_reward": 0.2355,
+  "topic_variance": -0.1278,
+  "topic_mean": 0.0323,
+  "difficulty_gap_sq": 0.0032,
+  "asker_affinity": 0.0341,
+  "topic_covered": -0.2604,
+  "topic_weak": -0.0416,
+  "weak_not_covered": 0.0219,
+  "same_asker": -0.0606,
+  "asker_count": -0.0191,
+  "late_gain": 0.4084,
+  "theta_x_difficulty": 0.0088,
+  "core_se": -0.0764,
+  "band_low": -0.0115,
+  "band_high": 0.0041,
+  "questions_left": -0.081,
+  "total_variance": 0.2096,
+  "left_x_variance": 0.3927,
+  "weak_left": 0.2027,
+  "coding_overlap": 0.111,
+  "tech_before_coding": -0.1263,
+  "topic_ownership": -0.0134,
+  "topic_metrics": -0.0245,
+  "topic_tradeoffs": -0.0475,
+  "topic_system_design": -0.0481,
+  "topic_conflict": -0.0461,
+  "topic_debugging": -0.05,
+  "asker_manager": -0.0834,
+  "asker_tech": -0.0659,
+  "asker_skeptic": -0.0801
+ },
+ "last_quick": {
+  "at": "2026-11-24T00:26:25+00:00",
+  "seconds": 1.22,
+  "sim_episodes": 1500,
+  "real_sessions": {
+   "sessions": 5,
+   "turns": 25,
+   "turns_with_difficulty": 0,
+   "transitions": 23,
+   "td_rmse_before": 0.2014,
+   "td_rmse_after": 0.1425,
+   "weight_change": 0.0558
+  }
+ }
+}

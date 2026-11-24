@@ -2,6 +2,7 @@
 
 import { AGENT_IDS, AGENTS, describeAgent } from "./agents.js";
 import { attentionLine } from "./checks.js";
+import { companyBlock, getCompany } from "./companies.js";
 import { CODING_ROUND, MAX_QUESTIONS, MAX_QUESTION_WORDS } from "./config.js";
 
 const PANEL_LIST = AGENT_IDS.map((id) => `- ${describeAgent(id)}`).join("\n");
@@ -82,10 +83,17 @@ Use this memory. Probe the weak spots early, and mention in deliberation when th
 export function panelSystem(session) {
   const bidRules = AGENT_IDS.map((id) => `${id} bids high when ${AGENTS[id].bidsWhen}`).join(", ");
 
-  return `You run a live interview panel of three interviewers for the role: ${session.role}.
+  const company = getCompany(session.company);
+  const companyText = companyBlock(company, "panel");
+  let forWhom = "";
+  if (company.id !== "general") {
+    forWhom = ` at ${company.name}`;
+  }
+
+  return `You run a live interview panel of three interviewers for the role: ${session.role}${forWhom}.
 The panel:
 ${PANEL_LIST}
-
+${companyText ? `\n${companyText}\n` : ""}
 ${memoryBlock(session.profile)}
 
 Each turn you do three things:
@@ -118,8 +126,10 @@ export function transcriptText(session) {
 }
 
 export function problemSystem(session, difficulty) {
+  const companyText = companyBlock(getCompany(session.company), "problem");
+
   return `You write a live coding problem, HackerRank style, for a ${session.role} interview. Theo the Tech Lead will introduce it.
-Difficulty ${difficulty}/5 (1 = warmup like reverse words, 3 = classic medium like two-sum or valid parentheses, 5 = harder like interval merge or LRU logic). It must be solvable in about 8 minutes in plain Python or JavaScript (the candidate picks).
+${companyText ? `${companyText}\nIt still has to fit the format below: one function, JSON in and out, hidden tests.\n` : ""}Difficulty ${difficulty}/5 (1 = warmup like reverse words, 3 = classic medium like two-sum or valid parentheses, 5 = harder like interval merge or LRU logic). It must be solvable in about 8 minutes in plain Python or JavaScript (the candidate picks).
 Return:
 - title
 - spoken_intro: Theo says it aloud, under 30 words, no code
@@ -138,6 +148,7 @@ ${PANEL_LIST}
 Each interviewer votes hire or no_hire with one reason and an exact short quote from the candidate as evidence. Then give the panel verdict, overall score 1-5 (one decimal), 2-3 strengths, 2-3 growth areas each with an exact evidence quote and one concrete practice drill, a 2 sentence summary, and spoken_verdict: what the manager says aloud to the candidate, under 45 words, kind and honest.
 For the coding round, weigh the [INTEGRITY] line (a large paste the candidate couldn't explain is a red flag) and the [TALK-THROUGH] with Theo (how they communicated while coding).
 [ATTENTION] lines count for very little: never accuse the candidate over them.
+${companyBlock(getCompany(session.company), "verdict")}
 Quotes must be copied word for word from the candidate's answers, never from Theo's lines. Never invent evidence. Refer to the candidate as "they", never he or she.`;
 }
 

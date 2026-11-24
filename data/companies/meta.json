@@ -1,0 +1,105 @@
+{
+  "id": "meta",
+  "name": "Meta",
+  "tagline": "Two fast coding problems per round, think out loud, then fix bugs",
+  "values": [
+    {
+      "name": "Move fast",
+      "meaning": "Build and learn quickly with urgency, together in one direction."
+    },
+    {
+      "name": "Build awesome things",
+      "meaning": "Ship work that is inspiring, not just useful."
+    },
+    {
+      "name": "Be direct and respect your colleagues",
+      "meaning": "Have hard conversations openly and respectfully."
+    },
+    {
+      "name": "Focus on long-term impact",
+      "meaning": "Pick problems with lasting impact over quick wins."
+    },
+    {
+      "name": "Live in the future",
+      "meaning": "Build the future you want and adopt it early."
+    },
+    {
+      "name": "Meta, Metamates, me",
+      "meaning": "Own the mission and look after teammates."
+    }
+  ],
+  "loop": [
+    {
+      "round": "Phone screen",
+      "focus": "5 min intro, 30-35 min on one or two coding problems, 5 min Q&A."
+    },
+    {
+      "round": "Final coding round",
+      "focus": "Same format as the screen with a stricter bar."
+    },
+    {
+      "round": "Behavioral (new grad)",
+      "focus": "Past projects, conflict, feedback, and fit with a fast pace."
+    }
+  ],
+  "behavioral_themes": [
+    "Project you are most proud of",
+    "What you would do differently",
+    "Conflict with a teammate",
+    "Giving and receiving feedback",
+    "Pushing an idea despite pushback",
+    "Learning from a failure",
+    "Tech you are excited about"
+  ],
+  "coding_style": "One or two short DSA problems in about 35 minutes in CoderPad or a plain editor, no execution. Speed matters, so start brute force, talk through it, get working code, then optimize. Graded on reasoning, using hints, finding your own bugs, and stating big-O.",
+  "rubric": [
+    "Problem solving",
+    "Coding",
+    "Verification",
+    "Communication",
+    "Working code beats an unfinished optimal idea"
+  ],
+  "question_themes": [
+    "Array and string two-pointer problems",
+    "Binary tree traversal and views",
+    "Hash map counting and subarray sums",
+    "Graph BFS on a grid",
+    "Merge or iterate k sorted lists",
+    "Recursion with backtracking",
+    "Interval overlap",
+    "Follow-up to reduce space"
+  ],
+  "panel_flavor": {
+    "manager": "Maya asks about the project you are proudest of and its long-term impact, and how fast you shipped it.",
+    "tech": "Theo gives two problems back to back and watches the clock; he expects you to spot your own bugs before he points at them.",
+    "skeptic": "Sol asks you to dry-run your code on an edge case and wants measured impact numbers for any project claim."
+  },
+  "uncertain": [
+    "Rubric names come from the Meta prep guide PDF as cited by secondary sources, not fetched directly",
+    "Whether interns get a separate behavioral round; the intern guide describes coding only",
+    "Whether the AI-assisted coding pilot reaches intern loops"
+  ],
+  "sources": [
+    {
+      "title": "Meta Careers: Acing your SWE internship interview",
+      "url": "https://www.metacareers.com/blog/acing-your-software-engineering-internship-interview-at-meta/"
+    },
+    {
+      "title": "Meta Careers: Preparing for your SWE interview",
+      "url": "https://www.metacareers.com/blog/preparing-for-your-software-engineering-interview-at-meta/"
+    },
+    {
+      "title": "Meta Careers: Culture and values",
+      "url": "https://www.metacareers.com/facebook-life/"
+    },
+    {
+      "title": "Meta Careers: SWE full loop prep",
+      "url": "https://www.metacareers.com/swe-prep-onsite"
+    },
+    {
+      "title": "interviewing.io: Meta interview questions",
+      "url": "https://interviewing.io/meta-interview-questions"
+    }
+  ],
+  "researched_at": "2026-11-23"
+}

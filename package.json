@@ -9,7 +9,8 @@
     "build:native": "bash native/build.sh",
     "test": "node --test tests/",
     "format": "prettier --write .",
-    "check": "prettier --check . && node --test tests/"
+    "check": "prettier --check . && node --test tests/",
+    "research:companies": "env -u ANTHROPIC_API_KEY node --env-file=.env scripts/research-companies.js"
   },
   "keywords": [],
   "author": "",

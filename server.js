@@ -6,8 +6,10 @@ import express from "express";
 
 import { HOSTED, MAX_QUESTIONS, ROOT } from "./engine/config.js";
 import { codingChat } from "./engine/coding.js";
+import { listCompanies } from "./engine/companies.js";
 import { candidateId, readProfile, runBruin } from "./engine/memory.js";
 import { answerQuestion, closeInterview, newSession, openInterview } from "./engine/panel.js";
+import { researchCompany } from "./engine/research.js";
 import { MAX_AUDIO_BYTES, sttAvailable, transcribe } from "./engine/stt.js";
 import { synthesize, VOICES } from "./engine/tts.js";
 
@@ -53,6 +55,32 @@ function fail(res, err) {
 
 app.get("/api/profile", (req, res) => {
   res.json(readProfile(candidateId(req.query.name)));
+});
+
+// The start screen's company picker. The files only change on deploy, so browsers may cache it.
+app.get("/api/companies", (req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({ companies: listCompanies() });
+});
+
+// "Add a company": runs the company research Apify Actor and builds a profile from what it found.
+// It costs a crawl and a Claude call, so it shares the per-visitor limit with interview starts.
+app.post("/api/companies/research", async (req, res) => {
+  if (!allowStart(req)) {
+    res.status(429).json({ error: "You've hit the demo limit for this hour. Try again later." });
+    return;
+  }
+
+  try {
+    const out = await researchCompany(req.body || {});
+    res.json(out);
+  } catch (err) {
+    if (err.status) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    fail(res, err);
+  }
 });
 
 app.post("/api/start", async (req, res) => {

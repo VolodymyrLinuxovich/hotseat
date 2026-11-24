@@ -9,3 +9,6 @@ package-lock.json
 bruin
 engine/critic-model.json
 train/data
+engine/policy-model.json
+actor/node_modules
+actor/storage

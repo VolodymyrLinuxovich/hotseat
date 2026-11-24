@@ -1,0 +1,108 @@
+{
+  "id": "stripe",
+  "name": "Stripe",
+  "tagline": "Practical rounds: real code, real bugs, real APIs",
+  "values": [
+    {
+      "name": "Users first",
+      "meaning": "Start from user needs and talk to users directly."
+    },
+    {
+      "name": "Create with craft and beauty",
+      "meaning": "Careful, elegant work shows care for users."
+    },
+    {
+      "name": "Move with urgency and focus",
+      "meaning": "Act fast on what matters most."
+    },
+    {
+      "name": "Collaborate egolessly",
+      "meaning": "Share openly, debate ideas, give credit."
+    },
+    {
+      "name": "Stay curious",
+      "meaning": "Keep learning how businesses and the economy work."
+    },
+    {
+      "name": "Obsess over talent",
+      "meaning": "Everyone helps keep the hiring bar high."
+    }
+  ],
+  "loop": [
+    {
+      "round": "Technical screen",
+      "focus": "Practical coding problem with growing requirements in your own IDE."
+    },
+    {
+      "round": "Coding",
+      "focus": "Clean, working code for a realistic task, not a puzzle."
+    },
+    {
+      "round": "Bug squash",
+      "focus": "Find and fix bugs in an unfamiliar codebase using its tests."
+    },
+    {
+      "round": "Integration",
+      "focus": "Build a small feature from API docs, e.g. calling a REST service."
+    },
+    {
+      "round": "Behavioral",
+      "focus": "Past experience measured against the operating principles."
+    }
+  ],
+  "behavioral_themes": [
+    "Putting a user need first",
+    "Quality work under time pressure",
+    "Collaborating without ego",
+    "Learning an unfamiliar domain",
+    "Prioritizing what matters most",
+    "Handling disagreement on a design"
+  ],
+  "coding_style": "Practical, real-world tasks where your code actually runs, often in your own IDE or CoderPad. Graded on correct working code, readability, decision-making, and methodical debugging and testing. Requirements usually build in parts, so structure that can be extended matters more than clever algorithms.",
+  "rubric": [
+    "Working, readable code",
+    "Methodical debugging and testing hypotheses",
+    "Reading unfamiliar code and docs",
+    "Decision-making and tradeoffs",
+    "Operating Principles in behavioral",
+    "Written feedback, consensus decision"
+  ],
+  "question_themes": [
+    "Process a stream of payment events into per-payment state",
+    "Mask card numbers in log lines",
+    "Simple rate limiter",
+    "Small access-control or permissions system",
+    "Parse and aggregate structured records",
+    "Fix a failing test in an open source library",
+    "Call a REST API and combine responses"
+  ],
+  "panel_flavor": {
+    "manager": "Maya checks your stories against users first and urgency, and asks what you would cut to ship sooner.",
+    "tech": "Theo hands you a real codebase or API doc, lets you run code, and watches how you navigate, test, and extend it.",
+    "skeptic": "Sol wants evidence you tested a hypothesis before changing code, and asks how you know a fix works."
+  },
+  "uncertain": [
+    "Intern and new grad loops may drop rounds; public detail is mainly for experienced hires",
+    "Whether all candidates get both bug squash and integration rounds",
+    "Reports of an AI-assisted coding round in 2026 loops"
+  ],
+  "sources": [
+    {
+      "title": "Stripe Jobs: Culture and operating principles",
+      "url": "https://stripe.com/jobs/culture"
+    },
+    {
+      "title": "interviewing.io: Stripe interview questions",
+      "url": "https://interviewing.io/stripe-interview-questions"
+    },
+    {
+      "title": "Exponent: Stripe software engineer interview",
+      "url": "https://www.tryexponent.com/guides/stripe-software-engineer-interview"
+    },
+    {
+      "title": "IGotAnOffer: Stripe software engineer interview",
+      "url": "https://igotanoffer.com/en/advice/stripe-software-engineer-interview"
+    }
+  ],
+  "researched_at": "2026-11-23"
+}

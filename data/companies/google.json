@@ -1,0 +1,107 @@
+{
+  "id": "google",
+  "name": "Google",
+  "tagline": "DSA coding in a plain doc, judged by a committee not the interviewer",
+  "values": [
+    {
+      "name": "General Cognitive Ability",
+      "meaning": "How you structure and reason through unfamiliar problems."
+    },
+    {
+      "name": "Role-Related Knowledge",
+      "meaning": "Depth in CS fundamentals and evidence you have applied it."
+    },
+    {
+      "name": "Leadership",
+      "meaning": "Emergent leadership: stepping up when needed, stepping back when not."
+    },
+    {
+      "name": "Googleyness",
+      "meaning": "Comfort with ambiguity, bias to action, humility, working well with others."
+    }
+  ],
+  "loop": [
+    {
+      "round": "Online assessment",
+      "focus": "Timed 1-2 easy-medium algorithm problems; not always given."
+    },
+    {
+      "round": "Technical interview 1",
+      "focus": "45 min DSA problem in a shared doc, complexity, edge cases."
+    },
+    {
+      "round": "Technical interview 2",
+      "focus": "Second 45 min DSA problem with a different engineer."
+    },
+    {
+      "round": "Hiring committee",
+      "focus": "Non-interviewers review written feedback and decide."
+    },
+    {
+      "round": "Team matching",
+      "focus": "Host manager calls on resume fit, projects and motivation."
+    }
+  ],
+  "behavioral_themes": [
+    "Handling ambiguity",
+    "Learning something fast",
+    "Working with a difficult teammate",
+    "Stepping up without a title",
+    "Receiving and acting on feedback",
+    "Intellectual humility when wrong",
+    "Past project tradeoffs"
+  ],
+  "coding_style": "Data structures and algorithms in a blank shared doc with no IDE, autocomplete or execution. Interviewers expect clarifying questions, narrated reasoning, readable syntactically correct code, self-made test cases, and stated time and space complexity. Follow-ups often add a twist mid-problem.",
+  "rubric": [
+    "General Cognitive Ability",
+    "Role-Related Knowledge",
+    "Leadership",
+    "Googleyness",
+    "Hire scale from Strong No Hire to Strong Hire",
+    "Hiring committee consensus"
+  ],
+  "question_themes": [
+    "Graph traversal over a grid or network",
+    "Tree recursion and path questions",
+    "Interval merging or scheduling",
+    "Top-K or streaming with a heap",
+    "String parsing and hashing",
+    "Dynamic programming on sequences",
+    "Design a small data structure with given ops",
+    "Follow-up that scales input beyond memory"
+  ],
+  "panel_flavor": {
+    "manager": "Maya acts like a team-match host manager, probing ownership of past projects and why this team, not leveling you.",
+    "tech": "Theo runs a doc-only DSA round, pushes for the optimal complexity, then adds a twist and asks you to test by hand.",
+    "skeptic": "Sol writes for a committee that never met you, so they want concrete evidence, exact complexity, and numbers behind every claim."
+  },
+  "uncertain": [
+    "Official how-we-hire pages did not render; the four attributes come from secondary write-ups",
+    "Exact coding sub-rubric names (e.g. problem solving, coding, verification, communication)",
+    "Whether the OA and an AI-assisted round apply to every intern loop"
+  ],
+  "sources": [
+    {
+      "title": "Google Careers: How we hire",
+      "url": "https://www.google.com/about/careers/applications/how-we-hire/"
+    },
+    {
+      "title": "aced.io: Google SWE intern interview guide",
+      "url": "https://www.aced.io/guides/google-software-engineer-intern-interview"
+    },
+    {
+      "title": "aced.io: Google interview process",
+      "url": "https://www.aced.io/blog/google-interview-process"
+    },
+    {
+      "title": "interviewing.io: Google interview questions",
+      "url": "https://interviewing.io/google-interview-questions"
+    },
+    {
+      "title": "Interviewing at Google: Best practices, advice, and tips - Google Careers",
+      "url": "https://www.google.com/about/careers/applications/interview-tips/"
+    }
+  ],
+  "researched_at": "2026-11-23",
+  "actor_checked_at": "2026-11-24"
+}

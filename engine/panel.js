@@ -15,9 +15,12 @@ import {
   summarizeAttention,
 } from "./checks.js";
 import { CODING_OPENER, codingAnswerText, openCodingChat } from "./coding.js";
+import { getCompany } from "./companies.js";
 import { CODING_ROUND, MAX_QUESTIONS, MODEL } from "./config.js";
 import { estimateAbility, scoreInterval } from "./core.js";
+import { critique } from "./critic.js";
 import { candidateId, logSession, readProfile, runBruin } from "./memory.js";
+import { policyCheck, policyLine, suggestNext } from "./policy.js";
 import { panelSystem, problemSystem, transcriptText, verdictSystem, verdictTranscript } from "./prompts.js";
 import { ProblemSchema, TurnSchema, VerdictSchema } from "./schemas.js";
 
@@ -120,9 +123,10 @@ function nudgeDifficulty(decision, ability, checks) {
 }
 
 // The transcript plus a nudge toward topics the panel hasn't covered yet. A pasted coding
-// answer comes first, since following up on it matters more than coverage.
-function panelUser(session, pasteHint = "") {
-  const hints = [pasteHint, coverageHint(session), abilityHint(session)].filter(Boolean);
+// answer comes first, since following up on it matters more than coverage. The trained
+// policy's pick goes last; the panel weighs it like any other hint and keeps the final say.
+function panelUser(session, pasteHint = "", policyHint = "") {
+  const hints = [pasteHint, coverageHint(session), abilityHint(session), policyHint].filter(Boolean);
   if (hints.length === 0) {
     return transcriptText(session);
   }
@@ -144,11 +148,13 @@ function pushQuestion(session, out, problem) {
   session.turns.push(turn);
 }
 
-export function newSession({ name, role }) {
+export function newSession({ name, role, company }) {
   const candidate = candidateId(name);
   return {
     id: `s_${Date.now()}`,
     role: role || "Software Engineer Intern",
+    // Only the id travels with the browser's state; the details are looked up on every call.
+    company: getCompany(company).id,
     candidate,
     profile: readProfile(candidate),
     turns: [],
@@ -156,12 +162,22 @@ export function newSession({ name, role }) {
   };
 }
 
+// One engine note on whether the panel took the trained policy's suggestion.
+function notePolicy(policy, decision, checks) {
+  const note = policyCheck(policy, decision);
+  if (note) {
+    checks.push(note);
+  }
+}
+
 export async function openInterview(session) {
-  const raw = await ask(panelSystem(session), panelUser(session), TurnSchema);
+  const policy = suggestNext(session);
+  const raw = await ask(panelSystem(session), panelUser(session, "", policyLine(policy)), TurnSchema);
   const { out, checks } = checkTurn(raw, session);
+  notePolicy(policy, out.decision, checks);
 
   pushQuestion(session, out, null);
-  return { ...out, checks, index: 1, total: MAX_QUESTIONS };
+  return { ...out, checks, policy, index: 1, total: MAX_QUESTIONS };
 }
 
 // editor carries the browser's integrity counters when the answer is a coding submission.
@@ -178,12 +194,21 @@ export async function answerQuestion(session, answer, editor = null, attention =
 
   const coding = session.turns.length + 1 === CODING_ROUND;
 
+  // The trained policy picks before the panel call, so it can't see the panel's score for
+  // this answer yet; the critic's score stands in. No pick for the coding round (always
+  // Theo) or after the last answer.
+  let policy = null;
+  if (!coding && session.turns.length < MAX_QUESTIONS) {
+    const provisional = critique(text);
+    policy = suggestNext(session, { lastScore: provisional ? provisional.score : null });
+  }
+
   // The panel call and the problem call don't depend on each other, so they run together.
   let raw = null;
   let made = null;
   try {
     [raw, made] = await Promise.all([
-      ask(panelSystem(session), panelUser(session, pasteHint), TurnSchema),
+      ask(panelSystem(session), panelUser(session, pasteHint, policyLine(policy)), TurnSchema),
       coding ? makeProblem(session) : Promise.resolve(null),
     ]);
   } catch (err) {
@@ -221,10 +246,11 @@ export async function answerQuestion(session, answer, editor = null, attention =
   const done = session.turns.length >= MAX_QUESTIONS;
   if (!done) {
     nudgeDifficulty(out.decision, ability, checks);
+    notePolicy(policy, out.decision, checks);
     pushQuestion(session, out, problem);
   }
 
-  return { ...out, checks, problem, done, ability, index: session.turns.length, total: MAX_QUESTIONS };
+  return { ...out, checks, problem, done, ability, policy, index: session.turns.length, total: MAX_QUESTIONS };
 }
 
 export async function closeInterview(session) {
@@ -236,8 +262,10 @@ export async function closeInterview(session) {
   logSession(session, answered, verdict);
   const bruin = await runBruin();
 
+  const company = getCompany(session.company);
   return {
     ...verdict,
+    company: { id: company.id, name: company.name },
     checks,
     bruin: { ok: bruin.ok, ms: bruin.ms },
     profile: readProfile(session.candidate),

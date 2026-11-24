@@ -1,0 +1,124 @@
+{
+  "id": "amazon",
+  "name": "Amazon",
+  "tagline": "Every interviewer scores Leadership Principles alongside coding",
+  "values": [
+    {
+      "name": "Customer Obsession",
+      "meaning": "Start from the customer and work backwards."
+    },
+    {
+      "name": "Ownership",
+      "meaning": "Act for the long term and for the whole company, not just your task."
+    },
+    {
+      "name": "Dive Deep",
+      "meaning": "Know the details, audit often, question odd metrics."
+    },
+    {
+      "name": "Bias for Action",
+      "meaning": "Move fast on reversible decisions and take calculated risks."
+    },
+    {
+      "name": "Learn and Be Curious",
+      "meaning": "Keep learning and explore new possibilities."
+    },
+    {
+      "name": "Deliver Results",
+      "meaning": "Ship quality work on time despite setbacks."
+    },
+    {
+      "name": "Earn Trust",
+      "meaning": "Listen, speak candidly, and critique yourself openly."
+    },
+    {
+      "name": "Invent and Simplify",
+      "meaning": "Find new ideas and keep solutions simple."
+    }
+  ],
+  "value_label": "Amazon LP",
+  "loop": [
+    {
+      "round": "Online assessment",
+      "focus": "About 70 min coding plus a 15 min workstyles survey tied to LPs."
+    },
+    {
+      "round": "Technical interview",
+      "focus": "LeetCode easy-medium coding with working, tested code."
+    },
+    {
+      "round": "LP behavioral",
+      "focus": "Two or three LP stories per interviewer in STAR form."
+    },
+    {
+      "round": "Bar Raiser",
+      "focus": "Outside interviewer guarding the hiring bar, can block an offer."
+    }
+  ],
+  "behavioral_themes": [
+    "Going beyond the ask for a customer",
+    "Owning a mistake and fixing it",
+    "Digging into a confusing bug or metric",
+    "Acting fast without full information",
+    "Learning a new tool under deadline",
+    "Disagreeing with a teammate or lead",
+    "Simplifying an overbuilt solution",
+    "Missing a deadline and what changed"
+  ],
+  "coding_style": "Syntactically correct code, no pseudocode, usually without an IDE; data structures and algorithms at easy to medium level. Graded on working, robust code with edge cases and invalid input handled. Interviews often split time between LP questions and the coding problem.",
+  "rubric": [
+    "Leadership Principles, each interviewer assigned specific LPs",
+    "STAR answers with metrics",
+    "Scalable, robust, well-tested code",
+    "Bar Raiser: raise the bar vs current hires",
+    "Debrief decision"
+  ],
+  "question_themes": [
+    "Graph or grid traversal (BFS/DFS)",
+    "Linked list manipulation",
+    "Topological sort over dependencies",
+    "Heap based top-K or scheduling",
+    "Hash map counting and grouping",
+    "Tree level-order or path problems",
+    "Tell me about a time you owned something end to end",
+    "Tell me about a time you used data to decide"
+  ],
+  "panel_flavor": {
+    "manager": "Maya asks LP stories on Ownership and Deliver Results and wants the result in numbers and what you personally did.",
+    "tech": "Theo opens with an LP like Dive Deep, then a coding problem; he wants compilable code and asks how it fails on bad input.",
+    "skeptic": "Sol is the Bar Raiser for real: they map every answer to a named LP, drill follow-ups until they hear I not we, and ask for metrics."
+  },
+  "uncertain": [
+    "Exact intern interview count after the OA; reports range from one to three",
+    "Whether a Bar Raiser sits on every intern loop",
+    "Which LPs are assigned to intern interviewers"
+  ],
+  "sources": [
+    {
+      "title": "Amazon Leadership Principles",
+      "url": "https://atoz.amazon/en-us/discover/leadership-principles"
+    },
+    {
+      "title": "Amazon SDE university online assessment prep",
+      "url": "https://atoz.amazon/en-us/jobs/hiring-process/online-assessment/university/software-development-engineer"
+    },
+    {
+      "title": "Amazon SDE II interview prep",
+      "url": "https://atoz.amazon/en-us/jobs/hiring-process/interview-prep/software-development-engineer-ii"
+    },
+    {
+      "title": "Amazon hiring process",
+      "url": "https://atoz.amazon/en-us/jobs/hiring-process"
+    },
+    {
+      "title": "Interview Loop",
+      "url": "https://www.amazon.jobs/content/en/how-we-hire/interview-loop"
+    },
+    {
+      "title": "Together at Amazon - Discover - A to Z",
+      "url": "https://atoz.amazon/en-us/discover/culture/together-at-amazon"
+    }
+  ],
+  "researched_at": "2026-11-23",
+  "actor_checked_at": "2026-11-24"
+}

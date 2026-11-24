@@ -1,0 +1,16 @@
+{
+  "name": "hotseat-company-research",
+  "version": "0.1.0",
+  "description": "Apify Actor: collects how a company says it hires (interview process pages, values, leadership principles) for Hotseat's company mode.",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "apify": "^3.8.0",
+    "cheerio": "^1.0.0-rc.12",
+    "crawlee": "^3.18.2",
+    "playwright": "*"
+  }
+}
